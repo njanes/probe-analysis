@@ -1,0 +1,9 @@
+treatment,timepoint,well,position,file,image_mean_F,well_mean_F
+Buffer only,before,W11,2,AD_2026.09.23-BW11.2_0001.oir,29.8,27.3
+Buffer only,after,W11,2,AD_2026.09.24_A.AV1.11.2_0001.oir,78.6,104.7
+Probe 0.25,before,W3,2,AD_2026.09.23-BW3.2.oir,18.5,17.2
+Probe 0.25,after,W3,2,AD_2026.09.24_AP0.5W3.2.oir,1865.2,1838.0
+Probe 0.5,before,W4,2,AD_2026.09.23-BW4.2.oir,12.0,11.8
+Probe 0.5,after,W4,1,AD_2026.09.24_AP0.5W4.1_0001.oir,1342.6,1431.6
+Probe 1,before,W9,2,AD_2026.09.23-BW9.2.oir,20.3,21.8
+Probe 1,after,W9,1,AD_2026.09.24_AP2W9.1.oir,1405.2,1601.4

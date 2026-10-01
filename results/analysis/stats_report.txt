@@ -1,0 +1,43 @@
+Read results/bead_measurements.csv
+Files per treatment code and timepoint:
+timepoint  after  before
+code                    
+AV1            9      11
+P0.5          10      11
+P1            13      12
+P2            11      10
+Excluded in settings.py: ['AD_2026.09.24_AP0.5W4.1.oir', 'AD_2026.09.24_AP0.5W4.2.oir', 'AD_2026.09.24_AP0.5W4.2_0001.oir', 'AD_2026.09.24_AP0.5W4.3.oir']
+Different resolution, kept (macro scales its pixel settings): ['AD_2026.09.23-BW1.1.oir', 'AD_2026.09.23-BW3.2.oir', 'AD_2026.09.23-BW4.2.oir', 'AD_2026.09.23-BW5.1.oir', 'AD_2026.09.23-BW5.2.oir', 'AD_2026.09.24_AP0.5W1.1.oir']
+Retakes of the same field (one kept per field): AD_2026.09.23-BW1.1.oir = AD_2026.09.23-BW1.1_0002.oir; AD_2026.09.23-BW1.1_0001.oir = AD_2026.09.23-BW1.1_0002.oir; AD_2026.09.23-BW10.1.oir = AD_2026.09.23-BW10.1_0001.oir; AD_2026.09.23-BW11.2.oir = AD_2026.09.23-BW11.2_0001.oir; AD_2026.09.23-BW5.1.oir = AD_2026.09.23-BW5.1_0001.oir; AD_2026.09.23-BW5.2.oir = AD_2026.09.23-BW5.2_0001.oir; AD_2026.09.23-BW5.3.oir = AD_2026.09.23-BW5.3_0001.oir; AD_2026.09.24_AP0.5W1.1.oir = AD_2026.09.24_AP0.5W1.1_0001.oir
+Repeat saves showing a DIFFERENT field, kept as extra images: ['AD_2026.09.23-BW7.3_0001.oir', 'AD_2026.09.24_A.AV1.11.2_0001.oir', 'AD_2026.09.24_AP1W5.1_0001.oir', 'AD_2026.09.24_AP2W8.1_0001.oir', 'AD_2026.09.24_AP2W9.3_0001.oir']
+More than 3 images in a well; not used (fewest beads): ['AD_2026.09.23-BW7.1.oir', 'AD_2026.09.24_AP1W5.3.oir', 'AD_2026.09.24_AP2W8.3.oir', 'AD_2026.09.24_AP2W9.2.oir']
+Wells with fewer than 3 images:
+timepoint  after  before
+well_name               
+W6             2       3
+Wells compared: 12; images before/after: 36/35; beads before/after: 712/888
+
+Signal = ring mean minus local background (counts).
+  treatment  n_wells  F_before_mean  F_after_mean  dF_mean  SNR_before_mean  SNR_after_mean  bg_after_mean  pct_saturated_after_mean
+Buffer only        3           18.5         162.3    143.8              3.8            30.6           31.7                       0.0
+ Probe 0.25        3           16.9        1770.2   1753.3              3.6           137.6           49.7                      53.5
+  Probe 0.5        3           14.4        1383.4   1369.1              3.0            83.4           61.7                      39.0
+    Probe 1        3           15.9        1633.3   1617.5              3.3            73.0           74.5                      45.3
+
+Statistics: well values (the replicate); outcome = each well's change from its own before images.
+
+=== Bead fluorescence (change in counts above background) ===
+Change from before to after in each treatment (mean of the wells with 95% CI; a description, not a test)
+  Buffer only     143.8 counts  (95% CI -168.3 to 455.9; SD 125.6; n = 3 wells)
+  Probe 0.25     1753.3 counts  (95% CI 998.4 to 2508.1; SD 303.9; n = 3 wells)
+  Probe 0.5      1369.1 counts  (95% CI 1133.0 to 1605.1; SD 95.0; n = 3 wells)
+  Probe 1        1617.5 counts  (95% CI 625.2 to 2609.7; SD 399.4; n = 3 wells)
+Test 1. Did each probe concentration change the beads more than buffer alone? (Dunnett's test, corrected for 3 comparisons)
+  Probe 0.25     1609.5 counts more than buffer (95% CI 991.4 to 2227.6), p = 0.0002
+  Probe 0.5      1225.3 counts more than buffer (95% CI 607.2 to 1843.4), p = 0.0011
+  Probe 1        1473.7 counts more than buffer (95% CI 855.6 to 2091.8), p = 0.0004
+Test 2. Does the change grow with concentration? (linear regression on log2 concentration, probe wells only)
+  slope -67.9 counts per doubling of concentration (95% CI -377.9 to 242.1), R² = 0.04, p = 0.6204, n = 9 wells
+  Caution: beads at the detector maximum have their signal capped (pct_saturated_after), which flattens this slope. A flat slope does not show that binding is independent of concentration.
+
+Software: Python 3.14.4, numpy 2.5.3, pandas 3.0.6, scipy 1.18.1
