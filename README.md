@@ -39,6 +39,7 @@ the signal-to-noise ratio (SNR).
 | Step | What was done | Why |
 |---|---|---|
 | Find the beads | Beads were outlined on the **transmitted-light** image, not the fluorescence image. | So which beads are measured never depends on how bright they are: dim beads are measured as well as bright ones. |
+| Leave out out-of-focus beads | Beads above or below the focal plane (bright or dark centre in transmitted light) and smeared blurs (soft edges) were left out, judged on the transmitted-light image only. | In a confocal image, a bead outside the focal plane looks dim whether or not probe is bound, so including it would understate binding. |
 | Measure each bead | Signal = mean of the bead's outer ring minus the local background just around it. | The probe binds at the bead surface. Subtracting the local background removes free probe in the surrounding liquid and uneven illumination. |
 | Compare before and after | Each well's after-treatment beads were compared with the **same well's** before-treatment beads, as a population. | The fields differ between days, so beads can't be paired, but each well still serves as its own baseline. |
 | Treat the well as the replicate | Beads were averaged per image, images per well; statistics use the 12 well values (3 per treatment). | Beads in one well share its pipetting, incubation and imaging, so they aren't independent. Treating hundreds of beads as separate samples would overstate certainty. |
@@ -53,10 +54,10 @@ chances of a false positive. Significance level: p < 0.05.
 
 | Issue | How it was handled |
 |---|---|
-| File codes don't match concentrations (P0.5 = Probe 0.25, P1 = Probe 0.5, P2 = Probe 1) | Treatments taken from the plate map by well number, not from the file names. |
+| File codes don't match concentrations (P0.5 = Probe 0.25, P1 = Probe 0.5, P2 = Probe 1) | Mapped to the correct labels. |
 | W4 and W7 carry the previous group's code (W4 named P0.5, W7 named P1) | Corrected to the plate map (W4 = Probe 0.5, W7 = Probe 1). |
 | W4's first after-treatment images (12:59 to 13:02) look untreated, unlike its second set 5 minutes later | First set excluded; second set used. |
-| Some positions saved more than once (`_0001`, `_0002`) | Retakes of the same field: one kept. Different fields: kept as extra images, with at most 3 per well, chosen by resolution and bead count, never by fluorescence. The files left out, and why, are listed in `settings.py`. |
+| Some positions saved more than once (`_0001`, `_0002`) | Retakes of the same field: one kept. Different fields: kept as extra images, with at most 3 per well, chosen by resolution and bead count, never by fluorescence. |
 | Some images at half resolution (1024 x 1024) | Kept, with the analysis settings scaled to their pixel size. |
 | W6 after-treatment position 1 was never saved; W11 has no after-treatment position 1 | W6 uses 2 images. W11 uses a second field at position 2 instead. |
 
@@ -108,7 +109,7 @@ may be hidden; this result does **not** show that binding is independent of conc
 
 Each dot is one bead; each narrow column is one well. The grey line at the top is the detector
 maximum. After probe treatment most beads are far brighter than the untreated beads, and many
-are piled against the maximum. Some beads in every probe well stay near background.
+are piled against the maximum.
 
 ### Signal-to-noise ratio and background
 
@@ -139,6 +140,7 @@ values are descriptive (not tested), and saturation caps the SNR of the brightes
 | Buffer-only beads brightened between days | Part of every change is not due to the probe; handled by comparing with buffer. | Include an untreated well imaged on both days, and a fluorescence reference slide to check day-to-day instrument drift. |
 | No increase in signal from 0.25 to 1 per 100 µL | Any rising part of the dose-response curve may lie below 0.25, where it wasn't measured. | Add lower concentrations (below 0.25 per 100 µL). |
 | W4's first after-treatment images looked untreated | If its probe was added late, W4 incubated for less time than the other wells. | Record the treatment time of each well. |
+| Out-of-focus beads, many in clumps of stacked beads | Left out, so fewer beads are measured per well. | Let beads settle fully before imaging, use fewer beads per well to avoid stacking, and focus on the bead equator. |
 | File labelling errors and a missing position | Corrected from the plate map; W6 has 2 images instead of 3. | Use file codes that match the concentrations and check each well's name before saving. |
 
 ## Files and re-running
@@ -146,23 +148,25 @@ values are descriptive (not tested), and saturation caps the SNR of the brightes
 ```
 probe-analysis/
 ├── bead_segmentation.ijm   Fiji macro: finds the beads and measures their fluorescence
-├── settings.py             plate map, images left out and why, figure colours
-├── analyze.py              labels the images, calculates results, runs the statistics
+├── settings.py             analysis settings: treatment labels, well corrections, exclusions
+├── analyze.py              labels the files, picks the images, calculates results, runs the statistics
 ├── make_figures.py         makes the figures from analyze.py's tables
 ├── data/                   raw .oir images
-└── results/                macro output: bead_measurements.csv, segmentation_log.csv, qc/, rois/, figure_images/
+└── results/                macro output: bead_measurements.csv, qc/, rois/, figure_images/, settings_used.txt
     └── analysis/           Python output: tables, stats_report.txt (full statistics), figures
 ```
 
 Requires Fiji (it includes Bio-Formats, which opens .oir files) and Python 3.10 or newer with the
 packages in `requirements.txt`.
 
-1. In Fiji, run `bead_segmentation.ijm` and choose the probe-analysis folder when asked. It reads
-   `data/` and writes to `results/`; its settings are at the top of the macro.
-2. From the project folder: `python3 analyze.py`, then `python3 make_figures.py`.
+1. Run `bead_segmentation.ijm` in Fiji on `data`, saving to `results`, with the default
+   settings (recorded in `results/settings_used.txt`).
+2. From the project folder: `python3 analyze.py results`, then `python3 make_figures.py results`.
 
 **Measurement settings** (1 pixel = 0.104 µm): beads kept if 3.8 to 7 µm across in transmitted
 light (including the halo), circularity of that outline at least 0.75, not touching the image edge; threshold by
-Otsu's method, never below 80. Outlines shrunk by 5 pixels to match the fluorescent ring; ring
+Otsu's method, never below 80. Out of focus (left out) if, on the transmitted-light image, the bead's
+centre differs from the local light level by more than 20% (centre contrast), its brightest central spot
+is more than 35% above it (bright spot), or its edge sharpness is below 0.09. Outlines shrunk by 5 pixels to match the fluorescent ring; ring
 width 5 pixels; background measured in a 10-pixel band starting 4 pixels outside the outline,
 excluding pixels near other objects. Saturated = any pixel at 4095 (12-bit maximum).
