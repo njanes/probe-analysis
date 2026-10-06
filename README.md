@@ -57,7 +57,7 @@ chances of a false positive. Significance level: p < 0.05.
 | File codes don't match concentrations (P0.5 = Probe 0.25, P1 = Probe 0.5, P2 = Probe 1) | Mapped to the correct labels. |
 | W4 and W7 carry the previous group's code (W4 named P0.5, W7 named P1) | Corrected to the plate map (W4 = Probe 0.5, W7 = Probe 1). |
 | W4's first after-treatment images (12:59 to 13:02) look untreated, unlike its second set 5 minutes later | First set excluded; second set used. |
-| Some positions saved more than once (`_0001`, `_0002`) | Retakes of the same field: one kept. Different fields: kept as extra images, with at most 3 per well, chosen by resolution and bead count, never by fluorescence. |
+| Some positions saved more than once (`_0001`, `_0002`) | Retakes of the same field: one kept. Different fields: kept as extra images, with at most 3 per well, chosen by bead count, never by fluorescence. |
 | Some images at half resolution (1024 x 1024) | Kept, with the analysis settings scaled to their pixel size. |
 | W6 after-treatment position 1 was never saved; W11 has no after-treatment position 1 | W6 uses 2 images. W11 uses a second field at position 2 instead. |
 
@@ -148,7 +148,7 @@ values are descriptive (not tested), and saturation caps the SNR of the brightes
 ```
 probe-analysis/
 ├── bead_segmentation.ijm   Fiji macro: finds the beads and measures their fluorescence
-├── settings.py             analysis settings: treatment labels, well corrections, exclusions
+├── settings.py             plate map, treatments, images left out
 ├── analyze.py              labels the files, picks the images, calculates results, runs the statistics
 ├── make_figures.py         makes the figures from analyze.py's tables
 ├── data/                   raw .oir images
@@ -161,7 +161,7 @@ packages in `requirements.txt`.
 
 1. Run `bead_segmentation.ijm` in Fiji on `data`, saving to `results`, with the default
    settings (recorded in `results/settings_used.txt`).
-2. From the project folder: `python3 analyze.py results`, then `python3 make_figures.py results`.
+2. From the project folder: `python3 analyze.py`, then `python3 make_figures.py`.
 
 **Measurement settings** (1 pixel = 0.104 µm): beads kept if 3.8 to 7 µm across in transmitted
 light (including the halo), circularity of that outline at least 0.75, not touching the image edge; threshold by
