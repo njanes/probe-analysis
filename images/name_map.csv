@@ -1,0 +1,161 @@
+new_name,original,treatment,well,position
+before_buffer_W10_1.oir,AD_2026.09.23-BW10.1_0001.oir,Buffer only,10,1
+before_buffer_W10_2.oir,AD_2026.09.23-BW10.2.oir,Buffer only,10,2
+before_buffer_W10_3.oir,AD_2026.09.23-BW10.3.oir,Buffer only,10,3
+before_buffer_W11_1.oir,AD_2026.09.23-BW11.1.oir,Buffer only,11,1
+before_buffer_W11_2.oir,AD_2026.09.23-BW11.2_0001.oir,Buffer only,11,2
+before_buffer_W11_3.oir,AD_2026.09.23-BW11.3.oir,Buffer only,11,3
+before_buffer_W12_1.oir,AD_2026.09.23-BW12.1.oir,Buffer only,12,1
+before_buffer_W12_2.oir,AD_2026.09.23-BW12.2.oir,Buffer only,12,2
+before_buffer_W12_3.oir,AD_2026.09.23-BW12.3.oir,Buffer only,12,3
+before_probe-1to100_W07_1.oir,AD_2026.09.23-BW7.1.oir,Probe 1:100,7,1
+before_probe-1to100_W07_2.oir,AD_2026.09.23-BW7.2.oir,Probe 1:100,7,2
+before_probe-1to100_W07_3.oir,AD_2026.09.23-BW7.3.oir,Probe 1:100,7,3
+before_probe-1to100_W07_3b.oir,AD_2026.09.23-BW7.3_0001.oir,Probe 1:100,7,3
+before_probe-1to100_W08_1.oir,AD_2026.09.23-BW8.1.oir,Probe 1:100,8,1
+before_probe-1to100_W08_2.oir,AD_2026.09.23-BW8.2.oir,Probe 1:100,8,2
+before_probe-1to100_W08_3.oir,AD_2026.09.23-BW8.3.oir,Probe 1:100,8,3
+before_probe-1to100_W09_1.oir,AD_2026.09.23-BW9.1.oir,Probe 1:100,9,1
+before_probe-1to100_W09_2.oir,AD_2026.09.23-BW9.2.oir,Probe 1:100,9,2
+before_probe-1to100_W09_3.oir,AD_2026.09.23-BW9.3.oir,Probe 1:100,9,3
+before_probe-1to200_W04_1.oir,AD_2026.09.23-BW4.1.oir,Probe 1:200,4,1
+before_probe-1to200_W04_2.oir,AD_2026.09.23-BW4.2.oir,Probe 1:200,4,2
+before_probe-1to200_W04_3.oir,AD_2026.09.23-BW4.3.oir,Probe 1:200,4,3
+before_probe-1to200_W05_1.oir,AD_2026.09.23-BW5.1_0001.oir,Probe 1:200,5,1
+before_probe-1to200_W05_2.oir,AD_2026.09.23-BW5.2_0001.oir,Probe 1:200,5,2
+before_probe-1to200_W05_3.oir,AD_2026.09.23-BW5.3_0001.oir,Probe 1:200,5,3
+before_probe-1to200_W06_1.oir,AD_2026.09.23-BW6.1.oir,Probe 1:200,6,1
+before_probe-1to200_W06_2.oir,AD_2026.09.23-BW6.2.oir,Probe 1:200,6,2
+before_probe-1to200_W06_3.oir,AD_2026.09.23-BW6.3.oir,Probe 1:200,6,3
+before_probe-1to400_W01_1.oir,AD_2026.09.23-BW1.1_0002.oir,Probe 1:400,1,1
+before_probe-1to400_W01_2.oir,AD_2026.09.23-BW1.2.oir,Probe 1:400,1,2
+before_probe-1to400_W01_3.oir,AD_2026.09.23-BW1.3.oir,Probe 1:400,1,3
+before_probe-1to400_W02_1.oir,AD_2026.09.23-BW2.1.oir,Probe 1:400,2,1
+before_probe-1to400_W02_2.oir,AD_2026.09.23-BW2.2.oir,Probe 1:400,2,2
+before_probe-1to400_W02_3.oir,AD_2026.09.23-BW2.3.oir,Probe 1:400,2,3
+before_probe-1to400_W03_1.oir,AD_2026.09.23-BW3.1.oir,Probe 1:400,3,1
+before_probe-1to400_W03_2.oir,AD_2026.09.23-BW3.2.oir,Probe 1:400,3,2
+before_probe-1to400_W03_3.oir,AD_2026.09.23-BW3.3.oir,Probe 1:400,3,3
+after_buffer_W10_1.oir,AD_2026.09.24_A.AV1.10.1.oir,Buffer only,10,1
+after_buffer_W10_2.oir,AD_2026.09.24_A.AV1.10.2.oir,Buffer only,10,2
+after_buffer_W10_3.oir,AD_2026.09.24_A.AV1.10.3.oir,Buffer only,10,3
+after_buffer_W11_2.oir,AD_2026.09.24_A.AV1.11.2.oir,Buffer only,11,2
+after_buffer_W11_2b.oir,AD_2026.09.24_A.AV1.11.2_0001.oir,Buffer only,11,2
+after_buffer_W11_3.oir,AD_2026.09.24_A.AV1.11.3.oir,Buffer only,11,3
+after_buffer_W12_1.oir,AD_2026.09.24_A.AV1.12.1.oir,Buffer only,12,1
+after_buffer_W12_2.oir,AD_2026.09.24_A.AV1.12.2.oir,Buffer only,12,2
+after_buffer_W12_3.oir,AD_2026.09.24_A.AV1.12.3.oir,Buffer only,12,3
+after_probe-1to100_W07_1.oir,AD_2026.09.24_AP1W7.1.oir,Probe 1:100,7,1
+after_probe-1to100_W07_2.oir,AD_2026.09.24_AP1W7.2.oir,Probe 1:100,7,2
+after_probe-1to100_W07_3.oir,AD_2026.09.24_AP1W7.3.oir,Probe 1:100,7,3
+after_probe-1to100_W08_1.oir,AD_2026.09.24_AP2W8.1.oir,Probe 1:100,8,1
+after_probe-1to100_W08_1b.oir,AD_2026.09.24_AP2W8.1_0001.oir,Probe 1:100,8,1
+after_probe-1to100_W08_2.oir,AD_2026.09.24_AP2W8.2.oir,Probe 1:100,8,2
+after_probe-1to100_W08_3.oir,AD_2026.09.24_AP2W8.3.oir,Probe 1:100,8,3
+after_probe-1to100_W09_1.oir,AD_2026.09.24_AP2W9.1.oir,Probe 1:100,9,1
+after_probe-1to100_W09_2.oir,AD_2026.09.24_AP2W9.2.oir,Probe 1:100,9,2
+after_probe-1to100_W09_3.oir,AD_2026.09.24_AP2W9.3.oir,Probe 1:100,9,3
+after_probe-1to100_W09_3b.oir,AD_2026.09.24_AP2W9.3_0001.oir,Probe 1:100,9,3
+after_probe-1to200_W04_1.oir,AD_2026.09.24_AP0.5W4.1_0001.oir,Probe 1:200,4,1
+after_probe-1to200_W04_2.oir,AD_2026.09.24_AP0.5W4.2_0002.oir,Probe 1:200,4,2
+after_probe-1to200_W04_3.oir,AD_2026.09.24_AP0.5W4.3_0001.oir,Probe 1:200,4,3
+after_probe-1to200_W05_1.oir,AD_2026.09.24_AP1W5.1.oir,Probe 1:200,5,1
+after_probe-1to200_W05_1b.oir,AD_2026.09.24_AP1W5.1_0001.oir,Probe 1:200,5,1
+after_probe-1to200_W05_2.oir,AD_2026.09.24_AP1W5.2.oir,Probe 1:200,5,2
+after_probe-1to200_W05_3.oir,AD_2026.09.24_AP1W5.3.oir,Probe 1:200,5,3
+after_probe-1to200_W06_2.oir,AD_2026.09.24_AP1W6.2.oir,Probe 1:200,6,2
+after_probe-1to200_W06_3.oir,AD_2026.09.24_AP1W6.3.oir,Probe 1:200,6,3
+after_probe-1to400_W01_1.oir,AD_2026.09.24_AP0.5W1.1_0001.oir,Probe 1:400,1,1
+after_probe-1to400_W01_2.oir,AD_2026.09.24_AP0.5W1.2.oir,Probe 1:400,1,2
+after_probe-1to400_W01_3.oir,AD_2026.09.24_AP0.5W1.3.oir,Probe 1:400,1,3
+after_probe-1to400_W02_1.oir,AD_2026.09.24_AP0.5W2.1.oir,Probe 1:400,2,1
+after_probe-1to400_W02_2.oir,AD_2026.09.24_AP0.5W2.2.oir,Probe 1:400,2,2
+after_probe-1to400_W02_3.oir,AD_2026.09.24_AP0.5W2.3.oir,Probe 1:400,2,3
+after_probe-1to400_W03_1.oir,AD_2026.09.24_AP0.5W3.1.oir,Probe 1:400,3,1
+after_probe-1to400_W03_2.oir,AD_2026.09.24_AP0.5W3.2.oir,Probe 1:400,3,2
+after_probe-1to400_W03_3.oir,AD_2026.09.24_AP0.5W3.3.oir,Probe 1:400,3,3
+after_negctrl-1to3333_W12_1.oir,20261005W12A-1.oir,Negative control 1:3333,12,1
+after_negctrl-1to3333_W12_2.oir,20261005W12A-2.oir,Negative control 1:3333,12,2
+after_negctrl-1to3333_W12_3.oir,20261005W12A-3.oir,Negative control 1:3333,12,3
+after_negctrl-1to3333_W12_background.oir,20261005W12A-background.oir,Negative control 1:3333,12,background
+after_negctrl-1to3333_W13_1.oir,20261005W13A-1.oir,Negative control 1:3333,13,1
+after_negctrl-1to3333_W13_2.oir,20261005W13A-2.oir,Negative control 1:3333,13,2
+after_negctrl-1to3333_W13_3.oir,20261005W13A-3.oir,Negative control 1:3333,13,3
+after_negctrl-1to3333_W13_background.oir,20261005W13A-background.oir,Negative control 1:3333,13,background
+after_negctrl-1to3333_W14_1.oir,20261005W14A-1.oir,Negative control 1:3333,14,1
+after_negctrl-1to3333_W14_2.oir,20261005W14A-2.oir,Negative control 1:3333,14,2
+after_negctrl-1to3333_W14_3.oir,20261005W14A-3.oir,Negative control 1:3333,14,3
+after_probe-1to100000_W07_1.oir,20261005W7A-1.oir,Probe 1:100000,7,1
+after_probe-1to100000_W07_2.oir,20261005W7A-2.oir,Probe 1:100000,7,2
+after_probe-1to100000_W07_3.oir,20261005W7A-3.oir,Probe 1:100000,7,3
+after_probe-1to100000_W08_1.oir,20261005W8A-1.oir,Probe 1:100000,8,1
+after_probe-1to100000_W08_2.oir,20261005W8A-2.oir,Probe 1:100000,8,2
+after_probe-1to100000_W08_3.oir,20261005W8A-3.oir,Probe 1:100000,8,3
+after_probe-1to100000_W09_1.oir,20261005W9A-1.oir,Probe 1:100000,9,1
+after_probe-1to100000_W09_2.oir,20261005W9A-2.oir,Probe 1:100000,9,2
+after_probe-1to100000_W09_3.oir,20261005W9A-3.oir,Probe 1:100000,9,3
+after_probe-1to10000_W04_1.oir,20261005W4A-1(10000).oir,Probe 1:10000,4,1
+after_probe-1to10000_W04_2.oir,20261005W4A-2(10000).oir,Probe 1:10000,4,2
+after_probe-1to10000_W04_3.oir,20261005W4A-3(10000).oir,Probe 1:10000,4,3
+after_probe-1to10000_W05_1.oir,20261005W5A-1(10000).oir,Probe 1:10000,5,1
+after_probe-1to10000_W05_2.oir,20261005W5A-2(10000).oir,Probe 1:10000,5,2
+after_probe-1to10000_W05_3.oir,20261005W5A-3(10000).oir,Probe 1:10000,5,3
+after_probe-1to1000_W01_1.oir,20261005W1A-1.oir,Probe 1:1000,1,1
+after_probe-1to1000_W01_2.oir,20261005W1A-2.oir,Probe 1:1000,1,2
+after_probe-1to1000_W01_3.oir,20261005W1A-3.oir,Probe 1:1000,1,3
+after_probe-1to1000_W02_1.oir,20261005W2A-1.oir,Probe 1:1000,2,1
+after_probe-1to1000_W02_2.oir,20261005W2A-2.oir,Probe 1:1000,2,2
+after_probe-1to1000_W02_3.oir,20261005W2A-3.oir,Probe 1:1000,2,3
+after_probe-1to1000_W03_1.oir,20261005W3A-1.oir,Probe 1:1000,3,1
+after_probe-1to1000_W03_2.oir,20261005W3A-2.oir,Probe 1:1000,3,2
+after_probe-1to1000_W03_3.oir,20261005W3A-3.oir,Probe 1:1000,3,3
+after_probe-1to3333_W04_1.oir,20261005W4A-1(3333).oir,Probe 1:3333,4,1
+after_probe-1to3333_W04_2.oir,20261005W4A-2(3333).oir,Probe 1:3333,4,2
+after_probe-1to3333_W04_3.oir,20261005W4A-3(3333).oir,Probe 1:3333,4,3
+after_probe-1to3333_W05_1.oir,20261005W5A-1(3333).oir,Probe 1:3333,5,1
+after_probe-1to3333_W05_2.oir,20261005W5A-2(3333).oir,Probe 1:3333,5,2
+after_probe-1to3333_W05_3.oir,20261005W5A-3(3333).oir,Probe 1:3333,5,3
+after_probe-1to3333_W06_1.oir,20261005W6A-1.oir,Probe 1:3333,6,1
+after_probe-1to3333_W06_2.oir,20261005W6A-2.oir,Probe 1:3333,6,2
+after_probe-1to3333_W06_3.oir,20261005W6A-3.oir,Probe 1:3333,6,3
+after_probe-1to5000_W04_1.oir,20261005W4A-1(5000).oir,Probe 1:5000,4,1
+after_probe-1to5000_W04_2.oir,20261005W4A-2(5000).oir,Probe 1:5000,4,2
+after_probe-1to5000_W04_3.oir,20261005W4A-3(5000).oir,Probe 1:5000,4,3
+after_probe-1to5000_W05_1.oir,20261005W5A-1(5000).oir,Probe 1:5000,5,1
+after_probe-1to5000_W05_2.oir,20261005W5A-2(5000).oir,Probe 1:5000,5,2
+after_probe-1to5000_W05_3.oir,20261005W5A-3(5000).oir,Probe 1:5000,5,3
+before_negctrl-1to3333_W12_1.oir,20261005W12B-1.oir,Negative control 1:3333,12,1
+before_negctrl-1to3333_W12_3.oir,20261005W12B-3.oir,Negative control 1:3333,12,3
+before_negctrl-1to3333_W13_1.oir,20261005W13B-1.oir,Negative control 1:3333,13,1
+before_negctrl-1to3333_W13_2.oir,20261005W13B-2.oir,Negative control 1:3333,13,2
+before_negctrl-1to3333_W13_3.oir,20261005W13B-3.oir,Negative control 1:3333,13,3
+before_negctrl-1to3333_W14_1.oir,20261005W14B-1.oir,Negative control 1:3333,14,1
+before_negctrl-1to3333_W14_2.oir,20261005W14B-2.oir,Negative control 1:3333,14,2
+before_negctrl-1to3333_W14_3.oir,20261005W14B-3.oir,Negative control 1:3333,14,3
+before_probe-1to100000_W07_1.oir,20261005W7B-1.oir,Probe 1:100000,7,1
+before_probe-1to100000_W07_2.oir,20261005W7B-2.oir,Probe 1:100000,7,2
+before_probe-1to100000_W07_3.oir,20261005W7B-3.oir,Probe 1:100000,7,3
+before_probe-1to100000_W08_1.oir,20261005W8B-1.oir,Probe 1:100000,8,1
+before_probe-1to100000_W08_2.oir,20261005W8B-2.oir,Probe 1:100000,8,2
+before_probe-1to100000_W08_3.oir,20261005W8B-3.oir,Probe 1:100000,8,3
+before_probe-1to100000_W09_1.oir,20261005W9B-1.oir,Probe 1:100000,9,1
+before_probe-1to100000_W09_2.oir,20261005W9B-2.oir,Probe 1:100000,9,2
+before_probe-1to100000_W09_3.oir,20261005W9B-3.oir,Probe 1:100000,9,3
+before_probe-1to1000_W01_1.oir,20261005W1B-1.oir,Probe 1:1000,1,1
+before_probe-1to1000_W01_2.oir,20261005W1B-2.oir,Probe 1:1000,1,2
+before_probe-1to1000_W01_3.oir,20261005W1B-3.oir,Probe 1:1000,1,3
+before_probe-1to1000_W02_1.oir,20261005W2B-1.oir,Probe 1:1000,2,1
+before_probe-1to1000_W02_2.oir,20261005W2B-2.oir,Probe 1:1000,2,2
+before_probe-1to1000_W02_3.oir,20261005W2B-3.oir,Probe 1:1000,2,3
+before_probe-1to1000_W03_1.oir,20261005W3B-1.oir,Probe 1:1000,3,1
+before_probe-1to1000_W03_2.oir,20261005W3B-2.oir,Probe 1:1000,3,2
+before_probe-1to1000_W03_3.oir,20261005W3B-3.oir,Probe 1:1000,3,3
+before_probe-1to3333-5000-10000_W04_1.oir,20261005W4B-1.oir,"Probe 1:3333, 1:5000 and 1:10000 (baseline for all three)",4,1
+before_probe-1to3333-5000-10000_W04_2.oir,20261005W4B-2.oir,"Probe 1:3333, 1:5000 and 1:10000 (baseline for all three)",4,2
+before_probe-1to3333-5000-10000_W04_3.oir,20261005W4B-3.oir,"Probe 1:3333, 1:5000 and 1:10000 (baseline for all three)",4,3
+before_probe-1to3333-5000-10000_W05_1.oir,20261005W5B-1.oir,"Probe 1:3333, 1:5000 and 1:10000 (baseline for all three)",5,1
+before_probe-1to3333-5000-10000_W05_2.oir,20261005W5B-2.oir,"Probe 1:3333, 1:5000 and 1:10000 (baseline for all three)",5,2
+before_probe-1to3333-5000-10000_W05_3.oir,20261005W5B-3.oir,"Probe 1:3333, 1:5000 and 1:10000 (baseline for all three)",5,3
+before_probe-1to3333_W06_1.oir,20261005W6B-1.oir,Probe 1:3333,6,1
+before_probe-1to3333_W06_2.oir,20261005W6B-2.oir,Probe 1:3333,6,2
+before_probe-1to3333_W06_3.oir,20261005W6B-3.oir,Probe 1:3333,6,3

@@ -15,8 +15,5 @@ __pycache__/
 Thumbs.db
 
 # Raw data and large image output
-data/
-results/figure_images/
-results/qc/
-results/rois/
-results/analysis/representative_images/
+results/
+
