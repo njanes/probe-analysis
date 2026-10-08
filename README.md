@@ -14,6 +14,10 @@ depends on the dilution, and the signal-to-noise ratio (SNR).
 - **Binding grows with the amount of probe** across all 8 dilutions (Spearman's rho = 0.93,
   p < 0.0001). There is no detectable binding at 1:100000 or 1:10000, about 210 to 240 counts at 1:5000 and
   1:3333, about 1,380 at 1:1000 and about 2,070 to 2,330 at 1:400 to 1:100.
+- **Half of the maximum binding is reached at about 1:1300,** from a dilution-response curve fitted to
+  the probe wells (fig1, R² = 0.97).
+- **At 1:1000 and 1:200 nearly every bead binds probe** (93% and 99% of beads positive), against 4%
+  at 1:10000 (fig3).
 - **Every dilution from 1:1000 to 1:100 raised bead fluorescence far beyond buffer** (1,233 to 2,183
   counts more than buffer alone; p < 0.0001 for each). At 1:3333 and more dilute, the change did not
   differ significantly from buffer's (145 counts).
@@ -64,6 +68,9 @@ depends on the dilution, and the signal-to-noise ratio (SNR).
 | Treat the well as the replicate | Beads were averaged per image, images per well; statistics use 28 well values from 24 wells (2 or 3 per treatment). | Beads in one well share its pipetting, incubation and imaging, so they aren't independent. Treating hundreds of beads as separate samples would overstate certainty. |
 | Combine the experiments | Both experiments were measured and analysed together as one set. Each well is identified by its number and treatment (the two experiments reuse well numbers, always for different treatments). | One dilution-response from 1:100000 to 1:100, with every dilution compared with the same buffer wells. |
 | Choose the outcome | Each well's change in mean bead fluorescence (after minus before). | Fluorescence is the measure named in the study's aim. |
+| Express the change as % fluorescence (fig1) | Each well's change as a percentage of the mean change at the strongest dilution (1:100). | Puts the dilution-response on a 0 to 100% scale. |
+| Fit a dilution-response curve (fig1) | A 4-parameter logistic curve fitted to the well values: y = bottom + (top − bottom) / (1 + (D / D50)^hill), where 1:D is the dilution. | The standard model for a response that rises from a floor to a plateau; D50 is the dilution that gives half of the maximum. |
+| Count positive beads (fig3) | A bead is positive if its signal is above the mean + 3 SD of all untreated (before-treatment) beads, 68.5 counts; each well's percentage is averaged over its images. | Only 2 of the 719 untreated beads (0.3%) pass this cutoff, so a positive bead has clearly bound probe. |
 | Test 1: probe dilutions vs buffer | Dunnett's test on the change, comparing each probe dilution with buffer only. | Buffer wells changed too, so the probe's effect is the change beyond buffer. Dunnett's test is built for several treatments against one control and corrects for making 8 comparisons. |
 | Test 2: probe vs negative control | Welch's t-test on the change, probe against the negative control at the same dilution (1:3333). | The negative control at the same dilution shows how much signal comes without specific binding. Welch's version doesn't assume the two groups vary equally. |
 | Test 3: dilution trend | Spearman rank correlation of the change with the amount of probe, over all 8 probe dilutions (22 well values). | One test of whether binding grows as the probe is less diluted, across both experiments. Rank-based, because the detector caps the top of the curve, so the relation isn't a straight line. |
@@ -89,6 +96,8 @@ out 42% of the beads found before treatment and 29% after.
 
 ## What was found
 
+In the figures, buffer only is labelled Annexin-V, and each probe treatment by its dilution alone.
+
 ### Images
 
 ![Representative images](results/analysis/fig0_representative_images.png)
@@ -100,11 +109,6 @@ about 25 counts above background and so look black on this scale; after probe th
 brightness follows the dilution.
 
 ### Bead fluorescence
-
-![Bead fluorescence per well](results/analysis/fig1_fluorescence.png)
-
-Top: each well's mean bead fluorescence before (open) and after (filled) treatment; the bar is the
-treatment mean. Bottom: each well's change, with the mean ± SD of the wells.
 
 | Treatment | Before (counts) | After (counts) | Change (95% CI) | Beads at detector maximum |
 |---|---|---|---|---|
@@ -151,20 +155,40 @@ of their three dilutions.
 
 ### Dilution-response
 
-![Change in bead fluorescence against probe dilution](results/analysis/fig3_dilution_response.png)
+![Dilution-response](results/analysis/fig1_dilution_response.png)
 
-Each dot is one well; the line joins the dilution means, and the dashed lines show the mean change
-with buffer only and with the negative control. No binding is detectable at 1:100000 or 1:10000; binding appears to
-start between 1:10000 and 1:5000, rises steeply to 1:1000, and from 1:400 on most beads reach the
-detector maximum.
+Each dot is one well: its change from before to after, as a percentage of the mean change at 1:100,
+the strongest. The black bars are the mean ± SD of the wells, and the curve is a 4-parameter logistic
+fitted to the well values:
 
-### Every bead
+y = −0.9 + 100.1 / (1 + (D / 1282)^1.71), R² = 0.97, where 1:D is the dilution.
 
-![Every bead before and after treatment](results/analysis/fig2_every_bead.png)
+No binding is detectable at 1:100000 or 1:10000. Binding reaches 9% of the maximum at 1:5000 and 59%
+at 1:1000, then levels off at 89 to 100% from 1:400 on, where most beads are at the detector maximum.
+The curve's midpoint, half of the maximum, is at about 1:1300. The 1:3333 wells are shown with their
+controls in the next figure instead.
 
-Each dot is one bead; each narrow column is one well. The grey line at the top is the detector
-maximum. From 1:1000 to 1:100 most beads are far brighter than untreated beads, and at 1:400 to
-1:100 many are piled against the maximum.
+### Probe against the controls
+
+![Mean fluorescence before and after treatment](results/analysis/fig2_before_after.png)
+
+Mean bead fluorescence of the wells before (open bars) and after (filled bars) treatment, ± SD. Before
+treatment all three groups are at 22 to 28 counts. After, the probe at 1:3333 rises to 271 counts and
+the negative control at the same dilution only to 38 (Test 2). The Annexin-V (buffer only) wells rose
+to 171 on average, but very unevenly (SD 117).
+
+### Positive beads
+
+![Positive beads](results/analysis/fig3_positive_beads.png)
+
+A bead counts as positive if its signal is above 68.5 counts, the mean + 3 SD of all 719 untreated
+beads. Bars are the mean of the wells, ± SD (kept within 0 to 100%).
+
+| Dilution | Positive beads after treatment |
+|---|---|
+| 1:10000 | 4% (± 6) |
+| 1:1000 | 93% (± 6) |
+| 1:200 | 99% (± 1) |
 
 ### Signal-to-noise ratio and background
 
@@ -209,6 +233,7 @@ and saturation caps the SNR of the brightest beads as well.
 
 ```
 probe-analysis/
+├── HOW_TO_RUN.md           short guide for the researcher: what each script does and how to run it
 ├── bead_segmentation.ijm   Fiji macro: finds the beads and measures their fluorescence
 ├── settings.py             treatment names, images to leave out, images per well, detector maximum
 ├── analyze.py              labels the files, picks the images, calculates results, runs the statistics

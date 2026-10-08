@@ -4,15 +4,14 @@ Altair. Run from the project folder, after analyze.py:   python3 make_figures.py
 
 Saves PNG (300 dpi) and SVG files to results/analysis:
   fig0_representative_images   typical before/after image per treatment (green), one fixed display range
-  fig1_fluorescence            MAIN: mean bead fluorescence per well before/after, and the change
-  fig2_every_bead              every bead's signal (log scale), before and after, split by well
-  fig3_dilution_response       change per well against probe dilution
+  fig1_dilution_response       each well's change as % of the strongest dilution, mean ± SD, fitted curve
+  fig2_before_after            mean fluorescence before and after, for the treatments in settings.BEFORE_AFTER
+  fig3_positive_beads          % of beads positive after treatment, for the dilutions in settings.POSITIVE_BEADS
 """
 import base64
 import io
 import json
 import math
-import re
 from pathlib import Path
 
 import altair as alt
@@ -25,15 +24,14 @@ import settings as S
 
 RESULTS = Path("results")
 OUT = RESULTS / "analysis"
-beads = pd.read_csv(OUT / "bead_table.csv")
 wells = pd.read_csv(OUT / "well_summary.csv")
 reps = pd.read_csv(OUT / "representative_images.csv")
+fit = pd.read_csv(OUT / "dilution_fit.csv").iloc[0]
 ORDER = list(dict.fromkeys(wells["treatment"]))  # treatments in display order, as analyze.py sorted the wells
 PROBES = [t for t in ORDER if t.startswith(S.KINDS["probe"])]
-SAT = S.SATURATION
 
 # ---- style: sizes are in points (1 chart unit = 1 pt), so PNGs are saved at 300/72 scale = 300 dpi ----
-INK, INK2, BEFORE, EDGE, GRID = "#0b0b0b", "#52514e", "#b4b2a9", "#c3c2b7", "#e1e0d9"
+INK, INK2, EDGE, GRID = "#0b0b0b", "#52514e", "#c3c2b7", "#e1e0d9"
 GREY, DARK_GREY = "#898781", "#5f5e5a"
 BLUES = ["#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95"]
 RGB = np.array([[int(c[i:i + 2], 16) for i in (1, 3, 5)] for c in BLUES])
@@ -43,10 +41,18 @@ for t, at in zip(PROBES, np.linspace(0, len(BLUES) - 1, len(PROBES))):  # probe 
 FONT = "Arial, Helvetica, sans-serif"             # a list, so a missing font falls back instead of vanishing
 CSCALE = alt.Scale(domain=ORDER, range=[COLOR[t] for t in ORDER])
 FILL = alt.Fill("treatment:N", scale=CSCALE, legend=None)
-OPEN = dict(shape="circle", filled=True, fill="white", stroke=GREY, strokeWidth=1.5, size=45, opacity=1)
-FILLED = dict(shape="circle", filled=True, stroke="white", strokeWidth=1.2, size=45, opacity=1)
-XT = {i: t.rsplit(" ", 1) for i, t in enumerate(ORDER)}                # e.g. ["Probe", "1:400"]
-XSCALE = alt.Scale(domain=[-0.5, len(ORDER) - 0.5], nice=False)
+FILLED = dict(shape="circle", filled=True, stroke="white", strokeWidth=1.2, size=50, opacity=1)
+
+
+def x_label(t):
+    """A treatment's label, as lines: the probe by its dilution alone ("1:400"), buffer as "Annexin-V",
+    and a negative control by its dilution with "Negative control" below it."""
+    kind, _, dilution = t.partition(" 1:")
+    if kind == S.KINDS["buffer"]:
+        return ["Annexin-V"]
+    return [f"1:{dilution}"] if kind == S.KINDS["probe"] else [f"1:{dilution}", kind]
+
+
 YLAB = ["Bead fluorescence, ring", "(counts above background)"]
 if Path("/mnt/c/Windows/Fonts").is_dir():         # running in WSL: use the Windows fonts (e.g. Arial)
     vl_convert.register_font_directory("/mnt/c/Windows/Fonts")
@@ -54,12 +60,6 @@ if Path("/mnt/c/Windows/Fonts").is_dir():         # running in WSL: use the Wind
 
 def title(text, size=10, weight=600, color=INK, **kw):
     return alt.TitleParams(text, fontSize=size, fontWeight=weight, color=color, font=FONT, **kw)
-
-
-def footnote(lines, size=7.5):
-    """Small grey note under the whole figure, right-aligned."""
-    return title(lines, size=size, weight="normal", color=INK2, orient="bottom", anchor="end", align="right",
-                 offset=10)
 
 
 def text_at(text, x, y, **style):
@@ -74,20 +74,6 @@ def axis_labels(mapping, size=8, **kw):
         expr = f"abs(datum.value - {value}) < 1e-6 ? {json.dumps(lab, ensure_ascii=False)} : {expr}"
     return alt.Axis(values=list(mapping), labelExpr=expr, grid=False, labelFontSize=size, labelColor=INK2,
                     labelAngle=0, labelPadding=4, **kw)
-
-
-def log_axis(lo, hi, axis_title):
-    """Log axis with ticks at powers of 10, labelled 1, 10, 100, 1000 (plain digits render in any font)."""
-    return alt.Axis(values=[10.0 ** e for e in range(math.ceil(math.log10(lo)), math.floor(math.log10(hi)) + 1)],
-                    format="d", title=axis_title)
-
-
-def minor_ticks(lo, hi, y_scale):
-    """Short unlabelled ticks at 2 to 9 x each power of 10, left of a log axis."""
-    vals = [m * 10.0 ** e for e in range(math.floor(math.log10(lo)), math.ceil(math.log10(hi)) + 1)
-            for m in range(2, 10) if lo <= m * 10.0 ** e <= hi]
-    return alt.Chart(pd.DataFrame({"y": vals})).mark_rule(color=INK2, strokeWidth=0.6).encode(
-        x=alt.value(-2), x2=alt.value(0), y=alt.Y("y:Q", scale=y_scale))
 
 
 def nice_ticks(lo, hi, max_intervals=9):
@@ -107,8 +93,28 @@ def spread(n, half):
     return np.linspace(-half, half, n) if n > 1 else np.zeros(n)
 
 
-def X(field):
-    return alt.X(f"{field}:Q", scale=XSCALE, axis=axis_labels(XT, title=None))
+def linear_y(lo, hi, axis_title):
+    """Y encoding builder for a linear axis from lo to hi with nice tick values."""
+    scale = alt.Scale(domain=[lo, hi], nice=False, zero=False)
+    axis = alt.Axis(title=axis_title, values=nice_ticks(lo, hi), format="d")
+    return lambda field: alt.Y(f"{field}:Q", scale=scale, axis=axis)
+
+
+def error_bars(data, x, Y, mean_width=0):
+    """Mean ± SD of the wells: a line from data's lo to hi with end caps, plus a wider tick at the mean if
+    mean_width is given. A treatment with a single well has no SD (NaN), so no bar."""
+    layers = [alt.Chart(data).mark_rule(color=INK, strokeWidth=1.2).encode(x, Y("lo"), y2="hi:Q")]
+    for field, size in (("lo", 6), ("hi", 6), ("mean", mean_width)):
+        if size:
+            layers.append(alt.Chart(data).mark_tick(orient="horizontal", size=size, thickness=1.2, color=INK, opacity=1)
+                          .encode(x, Y(field)))
+    return layers
+
+
+def mean_sd(values):
+    """Mean, and mean minus and plus the SD, of a set of well values."""
+    m, sd = values.mean(), values.std()
+    return {"mean": m, "lo": m - sd, "hi": m + sd}
 
 
 def save(chart, name):
@@ -153,149 +159,85 @@ for start in range(0, len(ORDER), 5):
                 layers.append(text_at(tp.capitalize(), -6, SIDE / 2, angle=270, baseline="bottom", fontSize=10,
                                       color=INK))
             panel = alt.layer(*layers).properties(width=SIDE, height=SIDE)
-            panels.append(panel.properties(title=title(t, size=9)) if tp == "before" else panel)
+            panels.append(panel.properties(title=title(x_label(t), size=9)) if tp == "before" else panel)
         rows.append(alt.hconcat(*panels, spacing=6))
-display = re.search(r"figure display range=([^\n]+)", (RESULTS / "settings_used.txt").read_text(encoding="utf-8"))[1]
-save(alt.vconcat(*rows, spacing=6).properties(title=title(
-    "Representative images: typical well and image per treatment; display range " + display.replace("Grays", "Green"),
-    size=9, weight="normal", color=INK2, anchor="middle", offset=8)), "fig0_representative_images")
+save(alt.vconcat(*rows, spacing=6), "fig0_representative_images")
 
-# ---- Figure 1 (main): mean bead fluorescence per well, before/after (top) and the change (bottom) -------
-W1, H1 = 70 * len(ORDER), 215
-pos = wells["treatment"].map(ORDER.index)
-wells["xb"], wells["xa"] = pos - 0.18, pos + 0.18                        # before and after columns
-wells["xd"] = pos + wells.groupby("treatment")["well_name"].transform(lambda s: spread(len(s), 0.08))
-
-# top: before (open) and after (filled) value of each well, joined by a line; short bar = mean
-means = pd.DataFrame([{"x": w[x].iat[0] - 0.08, "x2": w[x].iat[0] + 0.08, "y": w[col].mean()}
-                      for _, w in wells.groupby("treatment", sort=False)
-                      for x, col in (("xb", "F_before"), ("xa", "F_after"))])
-dom1 = [10 ** v for v in padded(np.log10(wells[["F_before", "F_after"]].min().min()),
-                                np.log10(wells[["F_before", "F_after"]].max().max()))]
-scale1 = alt.Scale(type="log", domain=dom1, nice=False)
-
-
-def Y1(field):
-    return alt.Y(f"{field}:Q", scale=scale1, axis=log_axis(*dom1, YLAB))
-
-
-one = pd.DataFrame({"n": [0]})
-top = alt.layer(
-    minor_ticks(*dom1, scale1),
-    alt.Chart(wells).mark_rule(color=EDGE, strokeWidth=1).encode(X("xb"), Y1("F_before"), x2="xa:Q", y2="F_after:Q"),
-    alt.Chart(wells).mark_point(**OPEN).encode(X("xb"), Y1("F_before")),
-    alt.Chart(wells).mark_point(**FILLED).encode(X("xa"), Y1("F_after"), fill=FILL),
-    alt.Chart(means).mark_rule(color=INK, strokeWidth=1.6).encode(X("x"), Y1("y"), x2="x2:Q"),
-    # legend in the upper left, placed in points
-    alt.Chart(one).mark_point(**OPEN).encode(x=alt.value(16), y=alt.value(12)),
-    alt.Chart(one).mark_point(**FILLED, fill=COLOR[PROBES[len(PROBES) // 2]]).encode(x=alt.value(16), y=alt.value(29)),
-    text_at("Before", 30, 12, align="left", baseline="middle", fontSize=9, color=INK),
-    text_at("After", 30, 29, align="left", baseline="middle", fontSize=9, color=INK),
-).properties(width=W1, height=H1, title=title("Mean bead fluorescence per well, before and after (log scale)"))
-
-# bottom: each well's change; bar = mean ± SD of the wells
-bars = wells.groupby("treatment", sort=False)["dF"].agg(["mean", "std"]).reset_index(drop=True)
-bars["x"], bars["lo"], bars["hi"] = bars.index + 0.28, bars["mean"] - bars["std"], bars["mean"] + bars["std"]
-# a treatment with a single well has no SD (NaN), so no bar
-dom2 = padded(*[f(np.concatenate([wells["dF"], bars["lo"], bars["hi"]])) for f in (np.nanmin, np.nanmax)])
-
-
-def Y2(field):
-    return alt.Y(f"{field}:Q", scale=alt.Scale(domain=dom2, nice=False, zero=False),
-                 axis=alt.Axis(title="After − before (counts)", values=nice_ticks(*dom2), format="d"))
-
-
-bottom = alt.layer(
-    alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(Y2("y")),
-    alt.Chart(bars).mark_rule(color=INK, strokeWidth=1.2).encode(X("x"), Y2("lo"), y2="hi:Q"),
-    *[alt.Chart(bars).mark_tick(orient="horizontal", size=size, thickness=1.2, color=INK).encode(X("x"), Y2(f))
-      for f, size in (("lo", 6), ("hi", 6), ("mean", 14))],
-    alt.Chart(wells).mark_point(**{**FILLED, "strokeWidth": 1.5, "size": 55}).encode(X("xd"), Y2("dF"), fill=FILL),
-).properties(width=W1, height=H1, title=title("Change in bead fluorescence per well"))
-
-sat = wells.groupby("treatment")["pct_saturated_after"].mean()
-note = ["Each dot is one well (mean of its images). Bottom: bar = mean ± SD of the wells.",
-        f"Values are lower bounds where beads reach the detector maximum (up to {sat.max():.0f}% of beads in a "
-        f"treatment; see fig2)."]
-save(alt.vconcat(top, bottom, spacing=24).properties(title=footnote(note)), "fig1_fluorescence")
-
-# ---- Figure 2: every bead, log scale, split by well ------------------------------------------------------
-W2, H2 = 98 * len(ORDER), 245
-rng = np.random.default_rng(0)                     # fixed seed: the same jitter every run
-dots, ticks = [], {}
-for i, t in enumerate(ORDER):
-    wl = wells.loc[wells["treatment"] == t, "well_name"].tolist()
-    offs = spread(len(wl), 0.11)
-    for tp, dx in (("before", -0.22), ("after", 0.22)):
-        for k, well in enumerate(wl):
-            F = beads.loc[(beads["treatment"] == t) & (beads["timepoint"] == tp) & (beads["well_name"] == well), "F"]
-            dots.append(pd.DataFrame({"x": i + dx + offs[k] + rng.uniform(-0.022, 0.022, len(F)),
-                                      "y": F.clip(lower=1).to_numpy(),
-                                      "col": BEFORE if tp == "before" else COLOR[t]}))
-        ticks[round(i + dx, 6)] = tp
-dom3 = [0.8, SAT * 1.6]
-scale3 = alt.Scale(type="log", domain=dom3, nice=False)
-fig2 = alt.layer(
-    minor_ticks(*dom3, scale3),
-    alt.Chart(pd.DataFrame({"y": [SAT]})).mark_rule(color=EDGE, strokeWidth=1).encode(
-        y=alt.Y("y:Q", scale=scale3, axis=log_axis(*dom3, YLAB))),
-    alt.Chart(pd.concat(dots, ignore_index=True)).mark_circle(size=6, opacity=0.7, strokeWidth=0).encode(
-        alt.X("x:Q", scale=XSCALE, axis=axis_labels(ticks, size=7, title=None)), alt.Y("y:Q", scale=scale3),
-        color=alt.Color("col:N", scale=None)),
-    # label for the detector-maximum line, just right of the plot
-    alt.Chart(pd.DataFrame({"y": [SAT], "t": ["detector\nmaximum"]})).mark_text(
-        align="left", baseline="middle", lineBreak="\n", fontSize=8, color=INK2).encode(
-        x=alt.value(W2 + 6), y=alt.Y("y:Q", scale=scale3), text="t:N"),
-    # treatment names under the before/after labels
-    alt.Chart(pd.DataFrame({"x": list(XT), "t": ["\n".join(v) for v in XT.values()]})).mark_text(
-        baseline="top", lineBreak="\n", fontSize=8, color=INK).encode(
-        x=alt.X("x:Q", scale=XSCALE), y=alt.value(H2 + 20), text="t:N"),
-).properties(width=W2, height=H2, title=title("Every bead before and after treatment (each narrow column is one well)"))
-save(alt.vconcat(fig2).properties(title=footnote(
-    "Log scale; values at or below 1 are shown at 1.", size=7)), "fig2_every_bead")
-
-# ---- Figure 3: dilution-response -------------------------------------------------------------------------
-W3, H3 = 520, 260
-probe = wells[wells["treatment"].isin(PROBES)].copy()
-probe["dilution"] = probe["treatment"].str.extract(r"1:(\d+)")[0].astype(int)
-mean3 = probe.groupby("dilution", as_index=False)["dF"].mean()
-dils = sorted(probe["dilution"].unique(), reverse=True)
-dom3x = [dils[0] * 1.6, dils[-1] / 1.6]                       # less diluted to the right
+# ---- Figure 1: dilution-response; each well's change as % of the strongest dilution, with the fitted curve -----
+W1, H1 = 520, 260
+resp = wells[wells["treatment"].isin(PROBES) & ~wells["treatment"].isin(S.BEFORE_AFTER)].copy()
+resp["D"] = resp["treatment"].str.extract(r"1:(\d+)")[0].astype(int)                     # dilution factor, 1:D
+resp["x"] = resp["D"] * 10 ** resp.groupby("D")["D"].transform(lambda s: spread(len(s), 0.04))   # side by side
+bars1 = pd.DataFrame([{"D": d, **mean_sd(w["dF_pct"])} for d, w in resp.groupby("D")])
+dils = sorted(resp["D"].unique(), reverse=True)
+dom1x = [dils[0] * 1.6, dils[-1] / 1.6]                       # less diluted to the right
+curve = pd.DataFrame({"x": np.logspace(math.log10(dom1x[1]), math.log10(dom1x[0]), 200)})
+curve["y"] = fit.bottom + (fit.top - fit.bottom) / (1 + (curve["x"] / fit.D50) ** fit.hill)
 # dilution labels; one that would overlap the label before it (at about 4.2 points a character) moves to a
 # second line
 labels, prev = {}, None                            # prev = (x in points, label) of the last first-line label
 for d in dils:
-    x, lab = W3 * math.log(dom3x[0] / d) / math.log(dom3x[0] / dom3x[1]), f"1:{d}"
+    x, lab = W1 * math.log(dom1x[0] / d) / math.log(dom1x[0] / dom1x[1]), f"1:{d}"
     if prev and x - prev[0] < 2.1 * (len(lab) + len(prev[1])):
         labels[d] = ["", lab]
     else:
         labels[d], prev = lab, (x, lab)
-X3 = alt.X("dilution:Q", scale=alt.Scale(type="log", domain=dom3x, nice=False),
-           axis=axis_labels(labels, size=7.5, labelOverlap=False, title="Probe dilution (more probe to the right)"))
-controls = wells[~wells["treatment"].isin(PROBES)].groupby("treatment", as_index=False)["dF"].mean().sort_values("dF")
-controls["label"] = controls["treatment"].str.lower()
-dom4 = padded(min(probe["dF"].min(), controls["dF"].min(), 0), probe["dF"].max())
-scale4 = alt.Scale(domain=dom4, nice=False, zero=False)
-Y4 = alt.Y("dF:Q", scale=scale4, axis=alt.Axis(title="After − before (counts)", values=nice_ticks(*dom4), format="d"))
-# control labels, in points from the top; each at least 10 points above the one below it
-ys = []
-for y in H3 * (dom4[1] - controls["dF"]) / (dom4[1] - dom4[0]):
-    ys.append(min(y, ys[-1] - 10) if ys else y)
-controls["y"] = ys
-ctrl_color = alt.Color("treatment:N", scale=CSCALE, legend=None)
+scale1x = alt.Scale(type="log", domain=dom1x, nice=False)
+axis1x = axis_labels(labels, size=7.5, labelOverlap=False, title="C2-GFP dilution ratio")
+Y1 = linear_y(*padded(min(bars1["lo"].min(), resp["dF_pct"].min(), curve["y"].min(), 0),
+                      max(bars1["hi"].max(), resp["dF_pct"].max(), curve["y"].max())), "% fluorescence")
+equation = (f"y = {fit.bottom:.1f} + {fit.top - fit.bottom:.1f} / (1 + (D / {fit.D50:.0f})^{fit.hill:.2f})"
+            .replace("-", "−") + f"\nD = dilution factor (1:D); R² = {fit.r_squared:.2f}")
+fig1 = alt.layer(
+    alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(Y1("y")),
+    alt.Chart(curve).mark_line(color=INK2, strokeWidth=1.2).encode(alt.X("x:Q", scale=scale1x, axis=axis1x), Y1("y")),
+    alt.Chart(resp).mark_point(**FILLED).encode(alt.X("x:Q", scale=scale1x), Y1("dF_pct"), fill=FILL),
+    *error_bars(bars1, alt.X("D:Q", scale=scale1x), Y1, mean_width=14),
+    text_at(equation, 8, 8, align="left", baseline="top", lineBreak="\n", fontSize=8.5, color=INK2),
+).properties(width=W1, height=H1)
+save(fig1, "fig1_dilution_response")
+
+# ---- Figure 2: mean fluorescence before and after, paired bars ----------------------------------------------
+groups = [t for t in ORDER if t in S.BEFORE_AFTER]
+W2, H2 = 110 * len(groups), 260
+rows = []
+for i, t in enumerate(groups):
+    w = wells[wells["treatment"] == t]
+    for tp, dx in (("before", -0.19), ("after", 0.19)):           # before: open bar; after: filled
+        rows.append({"timepoint": tp, "x": i + dx, "x0": i + dx - 0.16, "x1": i + dx + 0.16, "zero": 0,
+                     **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else COLOR[t],
+                     "stroke": GREY if tp == "before" else COLOR[t]})
+pairs = pd.DataFrame(rows)
+scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
+axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
+Y2 = linear_y(min(pairs["lo"].min(), 0), pairs["hi"].max() * 1.05, YLAB)
+fig2 = alt.layer(
+    alt.Chart(pairs).mark_rect(strokeWidth=1.2).encode(
+        alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
+        fill=alt.Fill("fill:N", scale=None), stroke=alt.Stroke("stroke:N", scale=None)),
+    *error_bars(pairs, alt.X("x:Q", scale=scale2x), Y2),
+    # treatment names under the before/after labels
+    alt.Chart(pd.DataFrame({"x": range(len(groups)), "t": ["\n".join(x_label(t)) for t in groups]})).mark_text(
+        baseline="top", lineBreak="\n", fontSize=8, color=INK).encode(
+        x=alt.X("x:Q", scale=scale2x), y=alt.value(H2 + 20), text="t:N"),
+).properties(width=W2, height=H2)
+save(fig2, "fig2_before_after")
+
+# ---- Figure 3: % of beads positive after treatment --------------------------------------------------------
+groups = [t for t in ORDER if t in S.POSITIVE_BEADS]
+W3, H3 = 90 * len(groups), 260
+positive = pd.DataFrame([{"x": i, "x0": i - 0.3, "x1": i + 0.3, "zero": 0, "fill": COLOR[t],
+                          **mean_sd(wells.loc[wells["treatment"] == t, "pct_positive_after"])}
+                         for i, t in enumerate(groups)])
+positive[["lo", "hi"]] = positive[["lo", "hi"]].clip(0, 100)      # a percentage stays within 0 to 100
+scale3x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
+axis3x = axis_labels({i: x_label(t) for i, t in enumerate(groups)}, title="C2-GFP dilution ratio")
+Y3 = linear_y(0, 100, "Positive beads (%)")
 fig3 = alt.layer(
-    alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(y=alt.Y("y:Q", scale=scale4)),
-    # the controls have no probe dilution: dashed lines across the plot at their mean change
-    alt.Chart(controls).mark_rule(strokeDash=[4, 3], strokeWidth=1.2).encode(
-        alt.Y("dF:Q", scale=scale4), color=ctrl_color),
-    alt.Chart(controls).mark_text(align="right", baseline="bottom", dy=-2, fontSize=7.5).encode(
-        x=alt.value(W3 - 2), y=alt.Y("y:Q", scale=None, axis=None), text="label:N", color=ctrl_color),
-    alt.Chart(mean3).mark_line(color=INK2, strokeWidth=1.2).encode(X3, Y4),
-    alt.Chart(probe).mark_point(**{**FILLED, "size": 50}).encode(X3, Y4, fill=FILL),
-).properties(width=W3, height=H3, title=title("Change in bead fluorescence against probe dilution"))
-save(alt.vconcat(fig3).properties(title=footnote(
-    ["Each dot is one well; line = mean per dilution. Dashed lines: mean change with each control.",
-     f"Values are lower bounds where beads reach the detector maximum (up to {sat.max():.0f}% of beads)."])),
-    "fig3_dilution_response")
+    alt.Chart(positive).mark_rect().encode(alt.X("x0:Q", scale=scale3x, axis=axis3x), Y3("mean"), x2="x1:Q",
+                                           y2="zero:Q", fill=alt.Fill("fill:N", scale=None)),
+    *error_bars(positive, alt.X("x:Q", scale=scale3x), Y3),
+).properties(width=W3, height=H3)
+save(fig3, "fig3_positive_beads")
 
 print(f"Figures done. In {OUT}")

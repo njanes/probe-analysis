@@ -15,6 +15,7 @@ Writes to results/analysis:
   well_summary.csv           one row per well and treatment (the replicate)
   treatment_summary.csv      mean, SD and 95% CI per treatment
   representative_images.csv  typical before/after image per treatment, for fig0
+  dilution_fit.csv           the curve fitted to the dilution-response, for fig1
   stats_report.txt           the printed report, including the tests
 """
 import platform
@@ -24,7 +25,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import scipy
-from scipy import stats
+from scipy import optimize, stats
 
 import settings as S
 
@@ -59,6 +60,12 @@ def treatments(word):
     by several dilutions names them all: 'probe-1to3333-5000-10000' -> Probe 1:3333, 1:5000 and 1:10000."""
     kind, _, dilutions = word.partition("-1to")
     return [f"{S.KINDS[kind]} 1:{d}" for d in dilutions.split("-")] if dilutions else [S.KINDS[kind]]
+
+
+def logistic(log_d, bottom, top, log_d50, hill):
+    """4-parameter logistic dose-response, in terms of the dilution factor D (1:D):
+    y = bottom + (top - bottom) / (1 + (D / D50)^hill), with log_d = log10(D) and log_d50 = log10(D50)."""
+    return bottom + (top - bottom) / (1 + 10 ** ((log_d - log_d50) * hill))
 
 
 def display_order(label):
@@ -118,18 +125,23 @@ beads = beads.merge(used[["timepoint", "treatment", "well", "well_name", "positi
 beads["F"] = beads["ring_mean"] - beads["bg_mean"]           # counts above local background
 beads["SNR"] = beads["F"] / beads["bg_sd"]
 beads["saturated"] = beads["disc_max"] >= S.SATURATION
+# a positive bead is brighter than nearly all untreated beads: above the mean + 3 SD of the before-treatment
+# beads (a shared before image counted once)
+before = beads[beads["timepoint"] == "before"].drop_duplicates(["file", "bead"])
+cutoff = before["F"].mean() + 3 * before["F"].std()
+beads["positive"] = beads["F"] > cutoff
 beads.to_csv(OUT / "bead_table.csv", index=False)
 
 # ---- 3. images, then wells (the replicate) --------------------------------------------------------
 keys = ["treatment", "well", "well_name", "timepoint"]
 img = beads.groupby(keys + ["image", "position"]).agg(
     file=("file", "first"), n_beads=("F", "size"), F=("F", "mean"), SNR=("SNR", "mean"), bg=("bg_mean", "mean"),
-    pct_saturated=("saturated", "mean")).reset_index()
+    pct_saturated=("saturated", "mean"), pct_positive=("positive", "mean")).reset_index()
 img = img.sort_values("treatment", key=lambda s: s.map(ORDER.index), kind="stable")   # treatment order, not A-Z
-img["pct_saturated"] *= 100
+img[["pct_saturated", "pct_positive"]] *= 100
 img.to_csv(OUT / "image_summary.csv", index=False)
 
-per_tp = img.groupby(keys)[["F", "SNR", "bg", "pct_saturated", "n_beads"]].mean()
+per_tp = img.groupby(keys)[["F", "SNR", "bg", "pct_saturated", "pct_positive", "n_beads"]].mean()
 per_tp["n_images"] = img.groupby(keys).size()
 wells = per_tp.unstack("timepoint")
 wells.columns = [f"{m}_{tp}" for m, tp in wells.columns]
@@ -137,26 +149,34 @@ wells = wells.reset_index()
 wells["dF"] = wells["F_after"] - wells["F_before"]
 wells["treatment"] = pd.Categorical(wells["treatment"], ORDER, ordered=True)
 wells = wells.sort_values(["treatment", "well"]).reset_index(drop=True)
+# dilution-response (fig1): the probe dilutions not in the before/after chart, with each well's change as a
+# % of the strongest of their mean changes
+in_response = wells["treatment"].astype(str).str.startswith(PROBE) & ~wells["treatment"].isin(S.BEFORE_AFTER)
+response_means = wells[in_response].groupby("treatment", observed=True)["dF"].mean()
+wells["dF_pct"] = 100 * wells["dF"] / response_means.max()
 wells.to_csv(OUT / "well_summary.csv", index=False)
 
 say(f"Well values compared: {len(wells)} (from {n_wells} wells); images before/after: "
     f"{n.images.before}/{n.images.after}; beads before/after: {n.beads.before}/{n.beads.after}")
 say("Out-of-focus beads left out by the Fiji macro (transmitted-light focus checks): " + "; ".join(
     f"{tp} {r.oof} of {r.found} ({100 * r.oof / r.found:.0f}%)" for tp, r in n.iterrows()))
+say(f"Positive bead: above {cutoff:.1f} counts (mean + 3 SD of the {len(before)} before-treatment beads)")
 
 # ---- 4. treatment summary ----------------------------------------------------------------------------
 rows = []
 for t in ORDER:
     w = wells[wells["treatment"] == t]
     row = {"treatment": t, "n_wells": len(w)}
-    for k in ["F_before", "F_after", "dF", "SNR_before", "SNR_after", "bg_before", "bg_after", "pct_saturated_after"]:
+    for k in ["F_before", "F_after", "dF", "SNR_before", "SNR_after", "bg_before", "bg_after", "pct_saturated_after",
+              "pct_positive_after"]:
         row.update(zip([f"{k}_mean", f"{k}_sd", f"{k}_ci95_low", f"{k}_ci95_high"], mean_ci(w[k])))
     rows.append(row)
 summary = pd.DataFrame(rows)
 summary.to_csv(OUT / "treatment_summary.csv", index=False)
 say("\nSignal = ring mean minus local background (counts).")
 say(summary[["treatment", "n_wells", "F_before_mean", "F_after_mean", "dF_mean", "SNR_before_mean",
-             "SNR_after_mean", "bg_after_mean", "pct_saturated_after_mean"]].round(1).to_string(index=False))
+             "SNR_after_mean", "bg_after_mean", "pct_saturated_after_mean", "pct_positive_after_mean"]]
+    .round(1).to_string(index=False))
 
 # ---- 5. statistics on well values ----------------------------------------------------------------------
 # The well is the replicate; outcome = each well's change in bead fluorescence (dF). Three tests, each
@@ -197,7 +217,21 @@ say(f"  rho = {rank.statistic:.2f}, p = {fmt_p(rank.pvalue)}, n = {len(probe_wel
 say("  Caution: beads at the detector maximum have their signal capped (pct_saturated_after), and a well "
     "whose before images are shared counts once for each of its dilutions.")
 
-# ---- 6. representative images, chosen by rule: the typical well, then its typical image -------------------
+# ---- 6. dilution-response curve (fig1), fitted to the well values ---------------------------------------
+resp = wells[in_response]
+log_d = np.log10(resp["treatment"].astype(str).str.extract(r"1:(\d+)")[0].astype(float)).to_numpy()
+y = resp["dF_pct"].to_numpy()
+(bottom, top, log_d50, hill), _ = optimize.curve_fit(logistic, log_d, y, p0=[0, 100, np.median(log_d), 1])
+r2 = 1 - ((y - logistic(log_d, bottom, top, log_d50, hill)) ** 2).sum() / ((y - y.mean()) ** 2).sum()
+pd.DataFrame([{"bottom": bottom, "top": top, "D50": 10 ** log_d50, "hill": hill, "r_squared": r2,
+               "n_wells": len(resp)}]).to_csv(OUT / "dilution_fit.csv", index=False)
+say(f"\n=== Dilution-response (fig1) ===\n% fluorescence = each well's change as a % of the mean change with "
+    f"{response_means.idxmax()}, the strongest")
+say(f"4-parameter logistic fit over {len(resp)} well values: y = {bottom:.1f} + {top - bottom:.1f} / "
+    f"(1 + (D / {10 ** log_d50:.0f})^{hill:.2f}), D = dilution factor (1:D); R² = {r2:.2f}; "
+    f"midpoint at 1:{10 ** log_d50:.0f}")
+
+# ---- 7. representative images, chosen by rule: the typical well, then its typical image -------------------
 reps = []
 for t in ORDER:
     w = wells[wells["treatment"] == t]

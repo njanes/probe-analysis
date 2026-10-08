@@ -17,3 +17,8 @@ EXCLUDE = {}
 MAX_IMAGES_PER_WELL = 3
 
 SATURATION = 4095                  # detector maximum (12-bit); a bead with any pixel at it is saturated
+
+# Treatments in the before/after bar chart (fig2), which are left out of the dilution-response (fig1),
+# and the dilutions in the positive-bead chart (fig3)
+BEFORE_AFTER = ["Buffer only", "Negative control 1:3333", "Probe 1:3333"]
+POSITIVE_BEADS = ["Probe 1:10000", "Probe 1:1000", "Probe 1:200"]
