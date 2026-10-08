@@ -7,6 +7,7 @@ Saves PNG (300 dpi) and SVG files to results/analysis:
   fig1_dilution_response       each well's change as % of the strongest dilution, mean ± SD, fitted curve
   fig2_before_after            mean fluorescence before and after, for the treatments in settings.BEFORE_AFTER
   fig3_positive_beads          % of beads positive after treatment, for the dilutions in settings.POSITIVE_BEADS
+  fig4_change_per_well         each well's change in fluorescence (after − before), mean ± SD
 and figures.html, every figure on one page (images embedded, so the file opens and can be shared on its own).
 """
 import base64
@@ -28,6 +29,7 @@ OUT = RESULTS / "analysis"
 wells = pd.read_csv(OUT / "well_summary.csv")
 reps = pd.read_csv(OUT / "representative_images.csv")
 fit = pd.read_csv(OUT / "dilution_fit.csv").iloc[0]
+tests = pd.read_csv(OUT / "figure_tests.csv")
 ORDER = list(dict.fromkeys(wells["treatment"]))  # treatments in display order, as analyze.py sorted the wells
 PROBES = [t for t in ORDER if t.startswith(S.KINDS["probe"])]
 
@@ -94,10 +96,10 @@ def spread(n, half):
     return np.linspace(-half, half, n) if n > 1 else np.zeros(n)
 
 
-def linear_y(lo, hi, axis_title):
-    """Y encoding builder for a linear axis from lo to hi with nice tick values."""
+def linear_y(lo, hi, axis_title, tick_hi=None):
+    """Y encoding builder for a linear axis from lo to hi, with nice tick values up to tick_hi (default hi)."""
     scale = alt.Scale(domain=[lo, hi], nice=False, zero=False)
-    axis = alt.Axis(title=axis_title, values=nice_ticks(lo, hi), format="d")
+    axis = alt.Axis(title=axis_title, values=nice_ticks(lo, hi if tick_hi is None else tick_hi), format="d")
     return lambda field: alt.Y(f"{field}:Q", scale=scale, axis=axis)
 
 
@@ -110,6 +112,29 @@ def error_bars(data, x, Y, mean_width=0):
             layers.append(alt.Chart(data).mark_tick(orient="horizontal", size=size, thickness=1.2, color=INK, opacity=1)
                           .encode(x, Y(field)))
     return layers
+
+
+def stars(p):
+    """Significance mark: *** p < 0.001, ** p < 0.01, * p < 0.05, ns (not significant) otherwise."""
+    return "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "ns"
+
+
+def tukey_brackets(pairwise, centre, base, step):
+    """One bracket per pairwise test, between the two groups' centres: the narrowest lowest, each a step higher."""
+    t = pairwise.assign(x1=pairwise["a"].map(centre), x2=pairwise["b"].map(centre))
+    t = t.assign(span=t["x2"] - t["x1"]).sort_values(["span", "x1"])
+    return [{"x1": r.x1, "x2": r.x2, "y": base + k * step, "label": stars(r.p)} for k, r in enumerate(t.itertuples())]
+
+
+def brackets(rows, x_scale, Y, drop):
+    """Significance brackets: a line from x1 to x2 at height y, ends dropping by drop, and the label above."""
+    data = pd.DataFrame(rows)
+    data["xm"], data["y_end"] = (data["x1"] + data["x2"]) / 2, data["y"] - drop
+    rule = alt.Chart(data).mark_rule(color=INK, strokeWidth=0.8)
+    return [rule.encode(alt.X("x1:Q", scale=x_scale), Y("y"), x2="x2:Q"),
+            *[rule.encode(alt.X(f"{x}:Q", scale=x_scale), Y("y_end"), y2="y:Q") for x in ("x1", "x2")],
+            alt.Chart(data).mark_text(baseline="bottom", dy=-1, fontSize=9, color=INK).encode(
+                alt.X("xm:Q", scale=x_scale), Y("y"), text="label:N")]
 
 
 def mean_sd(values):
@@ -204,23 +229,32 @@ save(fig1, "fig1_dilution_response")
 
 # ---- Figure 2: mean fluorescence before and after, paired bars ----------------------------------------------
 groups = [t for t in ORDER if t in S.BEFORE_AFTER]
-W2, H2 = 110 * len(groups), 260
+W2, H2 = 110 * len(groups), 320
 rows = []
 for i, t in enumerate(groups):
     w = wells[wells["treatment"] == t]
     for tp, dx in (("before", -0.19), ("after", 0.19)):           # before: open bar; after: filled
-        rows.append({"timepoint": tp, "x": i + dx, "x0": i + dx - 0.16, "x1": i + dx + 0.16, "zero": 0,
+        rows.append({"group": i, "timepoint": tp, "x": i + dx, "x0": i + dx - 0.16, "x1": i + dx + 0.16, "zero": 0,
                      **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else COLOR[t],
                      "stroke": GREY if tp == "before" else COLOR[t]})
 pairs = pd.DataFrame(rows)
 scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
 axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
-Y2 = linear_y(min(pairs["lo"].min(), 0), pairs["hi"].max() * 1.05, YLAB)
+# significance: before vs after over each pair (paired t-test), then the changes compared between the
+# treatments (Tukey's test), stacked above
+t2, top = tests[tests["figure"] == "fig2"], pairs[["mean", "hi"]].max().max()
+marks = [{"x1": i - 0.19, "x2": i + 0.19, "label": stars(r.p),
+          "y": pairs.loc[pairs["group"] == i, ["mean", "hi"]].max().max() + 0.06 * top}
+         for r in t2[t2["test"].str.startswith("paired")].itertuples() for i in [groups.index(r.a)]]
+marks += tukey_brackets(t2[t2["test"].str.startswith("Tukey")], {t: i for i, t in enumerate(groups)},
+                        1.2 * top, 0.13 * top)
+Y2 = linear_y(min(pairs["lo"].min(), 0), max(m["y"] for m in marks) + 0.12 * top, YLAB, tick_hi=1.05 * top)
 fig2 = alt.layer(
     alt.Chart(pairs).mark_rect(strokeWidth=1.2).encode(
         alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
         fill=alt.Fill("fill:N", scale=None), stroke=alt.Stroke("stroke:N", scale=None)),
     *error_bars(pairs, alt.X("x:Q", scale=scale2x), Y2),
+    *brackets(marks, scale2x, Y2, drop=0.025 * top),
     # treatment names under the before/after labels
     alt.Chart(pd.DataFrame({"x": range(len(groups)), "t": ["\n".join(x_label(t)) for t in groups]})).mark_text(
         baseline="top", lineBreak="\n", fontSize=8, color=INK).encode(
@@ -230,20 +264,40 @@ save(fig2, "fig2_before_after")
 
 # ---- Figure 3: % of beads positive after treatment --------------------------------------------------------
 groups = [t for t in ORDER if t in S.POSITIVE_BEADS]
-W3, H3 = 90 * len(groups), 260
+W3, H3 = 90 * len(groups), 320
 positive = pd.DataFrame([{"x": i, "x0": i - 0.3, "x1": i + 0.3, "zero": 0, "fill": COLOR[t],
                           **mean_sd(wells.loc[wells["treatment"] == t, "pct_positive_after"])}
                          for i, t in enumerate(groups)])
 positive[["lo", "hi"]] = positive[["lo", "hi"]].clip(0, 100)      # a percentage stays within 0 to 100
 scale3x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
 axis3x = axis_labels({i: x_label(t) for i, t in enumerate(groups)}, title="C2-GFP dilution ratio")
-Y3 = linear_y(0, 100, "Positive beads (%)")
+marks = tukey_brackets(tests[tests["figure"] == "fig3"], {t: i for i, t in enumerate(groups)}, 108, 11)
+Y3 = linear_y(0, max(m["y"] for m in marks) + 12, "Positive beads (%)", tick_hi=100)
 fig3 = alt.layer(
     alt.Chart(positive).mark_rect().encode(alt.X("x0:Q", scale=scale3x, axis=axis3x), Y3("mean"), x2="x1:Q",
                                            y2="zero:Q", fill=alt.Fill("fill:N", scale=None)),
     *error_bars(positive, alt.X("x:Q", scale=scale3x), Y3),
+    *brackets(marks, scale3x, Y3, drop=2.5),
 ).properties(width=W3, height=H3)
 save(fig3, "fig3_positive_beads")
+
+# ---- Figure 4: each well's change in fluorescence, with the mean ± SD centred on the wells ------------------
+groups = [t for t in PROBES if t not in S.BEFORE_AFTER]
+W4, H4 = 70 * len(groups), 260
+change = wells[wells["treatment"].isin(groups)].copy()
+change["x"] = change["treatment"].map(groups.index) + change.groupby("treatment")["well_name"].transform(
+    lambda s: spread(len(s), 0.12))                                          # a treatment's wells side by side
+bars4 = pd.DataFrame([{"x": i, **mean_sd(change.loc[change["treatment"] == t, "dF"])} for i, t in enumerate(groups)])
+scale4x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
+axis4x = axis_labels({i: x_label(t) for i, t in enumerate(groups)}, title="C2-GFP dilution ratio")
+Y4 = linear_y(*padded(min(change["dF"].min(), bars4["lo"].min(), 0), max(change["dF"].max(), bars4["hi"].max())),
+              "Δ fluorescence (counts)")
+fig4 = alt.layer(
+    alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(Y4("y")),
+    alt.Chart(change).mark_point(**FILLED).encode(alt.X("x:Q", scale=scale4x, axis=axis4x), Y4("dF"), fill=FILL),
+    *error_bars(bars4, alt.X("x:Q", scale=scale4x), Y4, mean_width=14),
+).properties(width=W4, height=H4)
+save(fig4, "fig4_change_per_well")
 
 # ---- every figure on one page, each at its printed size (300 dpi PNG shown at 96 CSS pixels per inch) ------
 body = ""

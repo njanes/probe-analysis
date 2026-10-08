@@ -16,8 +16,10 @@ Writes to results/analysis:
   treatment_summary.csv      mean, SD and 95% CI per treatment
   representative_images.csv  typical before/after image per treatment, for fig0
   dilution_fit.csv           the curve fitted to the dilution-response, for fig1
+  figure_tests.csv           the comparisons marked on the bar charts, fig2 and fig3
   stats_report.txt           the printed report, including the tests
 """
+import itertools
 import platform
 import re
 from pathlib import Path
@@ -231,7 +233,38 @@ say(f"4-parameter logistic fit over {len(resp)} well values: y = {bottom:.1f} + 
     f"(1 + (D / {10 ** log_d50:.0f})^{hill:.2f}), D = dilution factor (1:D); R² = {r2:.2f}; "
     f"midpoint at 1:{10 ** log_d50:.0f}")
 
-# ---- 7. representative images, chosen by rule: the typical well, then its typical image -------------------
+# ---- 7. comparisons marked on the bar charts --------------------------------------------------------------
+#   fig2: each treatment before vs after (paired t-test on its wells), and the treatments' changes compared
+#         pairwise (Tukey's test)
+#   fig3: the dilutions' % of positive beads compared pairwise (Tukey's test)
+rows = []
+for t in [t for t in ORDER if t in S.BEFORE_AFTER]:
+    w = wells[wells["treatment"] == t]
+    rows.append(["fig2", "paired t-test, before vs after", t, t, w["dF"].mean(),
+                 stats.ttest_rel(w["F_after"], w["F_before"]).pvalue])
+anova = {}
+for fig, members, col in (("fig2", S.BEFORE_AFTER, "dF"), ("fig3", S.POSITIVE_BEADS, "pct_positive_after")):
+    groups = [t for t in ORDER if t in members]
+    v = [wells.loc[wells["treatment"] == t, col].to_numpy() for t in groups]
+    anova[fig] = stats.f_oneway(*v).pvalue
+    tukey = stats.tukey_hsd(*v).pvalue
+    rows += [[fig, f"Tukey, {col}", groups[i], groups[j], v[j].mean() - v[i].mean(), tukey[i, j]]
+             for i, j in itertools.combinations(range(len(groups)), 2)]
+tests = pd.DataFrame(rows, columns=["figure", "test", "a", "b", "difference", "p"])
+tests.to_csv(OUT / "figure_tests.csv", index=False)
+say("\n=== Comparisons marked on the bar charts ===")
+say("Figure 2: each treatment before vs after (paired t-test on its wells; change in counts)")
+for r in tests[tests["test"].str.startswith("paired")].itertuples():
+    say(f"  {r.a:24s} {r.difference:+8.1f} counts, p = {fmt_p(r.p)}")
+say(f"Figure 2: the change compared between treatments (one-way ANOVA p = {fmt_p(anova['fig2'])}, then Tukey's test)")
+for r in tests[tests["test"] == "Tukey, dF"].itertuples():
+    say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
+say(f"Figure 3: % of positive beads compared between dilutions (one-way ANOVA p = {fmt_p(anova['fig3'])}, "
+    f"then Tukey's test)")
+for r in tests[tests["figure"] == "fig3"].itertuples():
+    say(f"  {r.b} vs {r.a}: {r.difference:+.1f} percentage points, p = {fmt_p(r.p)}")
+
+# ---- 8. representative images, chosen by rule: the typical well, then its typical image -------------------
 reps = []
 for t in ORDER:
     w = wells[wells["treatment"] == t]

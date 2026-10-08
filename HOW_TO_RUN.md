@@ -42,11 +42,12 @@ On a Mac, type `python3` instead of `python` here and below.
 
 Everything is in `results/analysis`:
 
-- `figures.html`: all four figures on one page; open it in a web browser. It works on its own, so it
+- `figures.html`: all the figures on one page; open it in a web browser. It works on its own, so it
   can be sent to someone as a single file.
 - `stats_report.txt`: all the numbers and test results in one place.
-- `fig0_representative_images.png`, `fig1_dilution_response.png`, `fig2_before_after.png` and
-  `fig3_positive_beads.png`: the figures (each also saved as .svg for editing).
+- `fig0_representative_images.png`, `fig1_dilution_response.png`, `fig2_before_after.png`,
+  `fig3_positive_beads.png` and `fig4_change_per_well.png`: the figures (each also saved as .svg for
+  editing).
 - The .csv tables, which open in Excel.
 
 To check that the beads were found correctly, look at the images in `results/qc`: beads that were

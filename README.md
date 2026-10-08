@@ -71,12 +71,14 @@ depends on the dilution, and the signal-to-noise ratio (SNR).
 | Express the change as % fluorescence (fig1) | Each well's change as a percentage of the mean change at the strongest dilution (1:100). | Puts the dilution-response on a 0 to 100% scale. |
 | Fit a dilution-response curve (fig1) | A 4-parameter logistic curve fitted to the well values: y = bottom + (top − bottom) / (1 + (D / D50)^hill), where 1:D is the dilution. | The standard model for a response that rises from a floor to a plateau; D50 is the dilution that gives half of the maximum. |
 | Count positive beads (fig3) | A bead is positive if its signal is above the mean + 3 SD of all untreated (before-treatment) beads, 68.5 counts; each well's percentage is averaged over its images. | Only 2 of the 719 untreated beads (0.3%) pass this cutoff, so a positive bead has clearly bound probe. |
+| Compare the groups in the bar charts (figs 2 and 3) | Fig 2: each treatment's before and after compared with a paired t-test on its wells, and the treatments' changes compared pairwise with Tukey's test. Fig 3: the dilutions' % of positive beads compared pairwise with Tukey's test. | The paired test uses each well as its own baseline. Tukey's test compares every pair of groups and corrects for making several comparisons. |
 | Test 1: probe dilutions vs buffer | Dunnett's test on the change, comparing each probe dilution with buffer only. | Buffer wells changed too, so the probe's effect is the change beyond buffer. Dunnett's test is built for several treatments against one control and corrects for making 8 comparisons. |
 | Test 2: probe vs negative control | Welch's t-test on the change, probe against the negative control at the same dilution (1:3333). | The negative control at the same dilution shows how much signal comes without specific binding. Welch's version doesn't assume the two groups vary equally. |
 | Test 3: dilution trend | Spearman rank correlation of the change with the amount of probe, over all 8 probe dilutions (22 well values). | One test of whether binding grows as the probe is less diluted, across both experiments. Rank-based, because the detector caps the top of the curve, so the relation isn't a straight line. |
 
-Only these three tests are run, each answering one question of the study; fewer tests mean fewer
-chances of a false positive. Significance level: p < 0.05.
+These three tests answer the study's questions. The bar charts (figs 2 and 3) also mark pairwise
+comparisons, listed in the report; with 2 or 3 wells per group, only large differences can reach
+significance. Significance level: p < 0.05.
 
 **Data issues found and how they were handled:**
 
@@ -174,8 +176,14 @@ controls in the next figure instead.
 
 Mean bead fluorescence of the wells before (open bars) and after (filled bars) treatment, ± SD. Before
 treatment all three groups are at 22 to 28 counts. After, the probe at 1:3333 rises to 271 counts and
-the negative control at the same dilution only to 38 (Test 2). The Annexin-V (buffer only) wells rose
-to 171 on average, but very unevenly (SD 117).
+the negative control at the same dilution only to 38. The Annexin-V (buffer only) wells rose to 171
+on average, but very unevenly (SD 117).
+
+Brackets over each pair compare before with after (paired t-test); brackets between groups compare
+their change from before to after (Tukey's test). * p < 0.05, ** p < 0.01, *** p < 0.001, ns = not
+significant. Only the probe at 1:3333 changed significantly (p = 0.015), and its change was larger
+than the negative control's (p = 0.021). Annexin-V's rise was not significant (p = 0.16) because its
+wells varied widely, and its change did not differ significantly from either 1:3333 group.
 
 ### Positive beads
 
@@ -189,6 +197,17 @@ beads. Bars are the mean of the wells, ± SD (kept within 0 to 100%).
 | 1:10000 | 4% (± 6) |
 | 1:1000 | 93% (± 6) |
 | 1:200 | 99% (± 1) |
+
+Brackets compare the dilutions pairwise (Tukey's test). 1:10000 differs from both 1:1000 and 1:200
+(p < 0.0001 for each); 1:1000 and 1:200 do not differ significantly (p = 0.32), as both are near 100%.
+
+### Change per well
+
+![Change in fluorescence per well](results/analysis/fig4_change_per_well.png)
+
+Each dot is one well's change from before to after, in counts above background, for the probe
+dilutions in fig1; the black bars are the mean ± SD of the wells. It shows the data of fig1 in counts
+rather than as a percentage, without the fitted curve.
 
 ### Signal-to-noise ratio and background
 
