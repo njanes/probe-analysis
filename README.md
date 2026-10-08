@@ -14,10 +14,10 @@ depends on the dilution, and the signal-to-noise ratio (SNR).
 - **Binding grows with the amount of probe** across all 8 dilutions (Spearman's rho = 0.93,
   p < 0.0001). There is no detectable binding at 1:100000 or 1:10000, about 210 to 240 counts at 1:5000 and
   1:3333, about 1,380 at 1:1000 and about 2,070 to 2,330 at 1:400 to 1:100.
-- **Half of the maximum binding is reached at about 1:1300,** from a dilution-response curve fitted to
-  the probe wells (fig1, R² = 0.97).
-- **At 1:1000 and 1:200 nearly every bead binds probe** (93% and 99% of beads positive), against 4%
-  at 1:10000 (fig3).
+- **Half of the maximum binding is reached at about 1:1200,** from a dilution-response curve fitted to
+  the probe wells (fig1, R² = 0.98).
+- **At 1:200 nearly every bead binds probe** (99% of beads positive), against 71% at 1:3333 and 4% at
+  1:10000; all three differ significantly from each other (fig3).
 - **Every dilution from 1:1000 to 1:100 raised bead fluorescence far beyond buffer** (1,233 to 2,183
   counts more than buffer alone; p < 0.0001 for each). At 1:3333 and more dilute, the change did not
   differ significantly from buffer's (145 counts).
@@ -71,7 +71,7 @@ depends on the dilution, and the signal-to-noise ratio (SNR).
 | Express the change as % fluorescence (fig1) | Each well's change as a percentage of the mean change at the strongest dilution (1:100). | Puts the dilution-response on a 0 to 100% scale. |
 | Fit a dilution-response curve (fig1) | A 4-parameter logistic curve fitted to the well values: y = bottom + (top − bottom) / (1 + (D / D50)^hill), where 1:D is the dilution. | The standard model for a response that rises from a floor to a plateau; D50 is the dilution that gives half of the maximum. |
 | Count positive beads (fig3) | A bead is positive if its signal is above the mean + 3 SD of all untreated (before-treatment) beads, 68.5 counts; each well's percentage is averaged over its images. | Only 2 of the 719 untreated beads (0.3%) pass this cutoff, so a positive bead has clearly bound probe. |
-| Compare the groups in the bar charts (figs 2 and 3) | Fig 2: each treatment's before and after compared with a paired t-test on its wells, and the treatments' changes compared pairwise with Tukey's test. Fig 3: the dilutions' % of positive beads compared pairwise with Tukey's test. | The paired test uses each well as its own baseline. Tukey's test compares every pair of groups and corrects for making several comparisons. |
+| Compare the groups in the bar charts (figs 2 and 3) | Fig 2: each treatment's before and after compared with a paired t-test on its wells, and the probe's after-treatment fluorescence compared with the negative control's at the same dilution (Welch's t-test). Fig 3: the dilutions' % of positive beads compared pairwise with Tukey's test. | The paired test uses each well as its own baseline. Welch's test doesn't assume the two groups vary equally. Tukey's test compares every pair of groups and corrects for making several comparisons. |
 | Test 1: probe dilutions vs buffer | Dunnett's test on the change, comparing each probe dilution with buffer only. | Buffer wells changed too, so the probe's effect is the change beyond buffer. Dunnett's test is built for several treatments against one control and corrects for making 8 comparisons. |
 | Test 2: probe vs negative control | Welch's t-test on the change, probe against the negative control at the same dilution (1:3333). | The negative control at the same dilution shows how much signal comes without specific binding. Welch's version doesn't assume the two groups vary equally. |
 | Test 3: dilution trend | Spearman rank correlation of the change with the amount of probe, over all 8 probe dilutions (22 well values). | One test of whether binding grows as the probe is less diluted, across both experiments. Rank-based, because the detector caps the top of the curve, so the relation isn't a straight line. |
@@ -163,12 +163,11 @@ Each dot is one well: its change from before to after, as a percentage of the me
 the strongest. The black bars are the mean ± SD of the wells, and the curve is a 4-parameter logistic
 fitted to the well values:
 
-y = −0.9 + 100.1 / (1 + (D / 1282)^1.71), R² = 0.97, where 1:D is the dilution.
+y = −0.3 + 98.3 / (1 + (D / 1237)^1.94), R² = 0.98, where 1:D is the dilution.
 
-No binding is detectable at 1:100000 or 1:10000. Binding reaches 9% of the maximum at 1:5000 and 59%
-at 1:1000, then levels off at 89 to 100% from 1:400 on, where most beads are at the detector maximum.
-The curve's midpoint, half of the maximum, is at about 1:1300. The 1:3333 wells are shown with their
-controls in the next figure instead.
+No binding is detectable at 1:100000 or 1:10000. Binding reaches 9 to 10% of the maximum at 1:5000
+and 1:3333 and 59% at 1:1000, then levels off at 89 to 100% from 1:400 on, where most beads are at the
+detector maximum. The curve's midpoint, half of the maximum, is at about 1:1200.
 
 ### Probe against the controls
 
@@ -179,11 +178,12 @@ treatment all three groups are at 22 to 28 counts. After, the probe at 1:3333 ri
 the negative control at the same dilution only to 38. The Annexin-V (buffer only) wells rose to 171
 on average, but very unevenly (SD 117).
 
-Brackets over each pair compare before with after (paired t-test); brackets between groups compare
-their change from before to after (Tukey's test). * p < 0.05, ** p < 0.01, *** p < 0.001, ns = not
-significant. Only the probe at 1:3333 changed significantly (p = 0.015), and its change was larger
-than the negative control's (p = 0.021). Annexin-V's rise was not significant (p = 0.16) because its
-wells varied widely, and its change did not differ significantly from either 1:3333 group.
+Brackets over each pair compare before with after (paired t-test); the bracket above compares the
+probe's after bar with the negative control's (Welch's t-test). Each shows its p-value: * p < 0.05,
+** p < 0.01, *** p < 0.001, ns = not significant. Only the probe at 1:3333 changed significantly
+(p = 0.015), and after treatment it was brighter than the negative control (p = 0.017). Annexin-V's
+rise was not significant (p = 0.16) because its wells varied widely: one well rose to 304 counts,
+the other two to 124 and 84.
 
 ### Positive beads
 
@@ -195,11 +195,11 @@ beads. Bars are the mean of the wells, ± SD (kept within 0 to 100%).
 | Dilution | Positive beads after treatment |
 |---|---|
 | 1:10000 | 4% (± 6) |
-| 1:1000 | 93% (± 6) |
+| 1:3333 | 71% (± 9) |
 | 1:200 | 99% (± 1) |
 
-Brackets compare the dilutions pairwise (Tukey's test). 1:10000 differs from both 1:1000 and 1:200
-(p < 0.0001 for each); 1:1000 and 1:200 do not differ significantly (p = 0.32), as both are near 100%.
+Brackets compare the dilutions pairwise (Tukey's test), each with its p-value. All three differ:
+1:3333 from 1:10000 (p = 0.00016), 1:200 from 1:10000 (p < 0.0001) and 1:200 from 1:3333 (p = 0.0056).
 
 ### Change per well
 

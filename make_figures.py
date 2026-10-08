@@ -56,7 +56,6 @@ def x_label(t):
     return [f"1:{dilution}"] if kind == S.KINDS["probe"] else [f"1:{dilution}", kind]
 
 
-YLAB = ["Bead fluorescence, ring", "(counts above background)"]
 if Path("/mnt/c/Windows/Fonts").is_dir():         # running in WSL: use the Windows fonts (e.g. Arial)
     vl_convert.register_font_directory("/mnt/c/Windows/Fonts")
 
@@ -114,16 +113,18 @@ def error_bars(data, x, Y, mean_width=0):
     return layers
 
 
-def stars(p):
-    """Significance mark: *** p < 0.001, ** p < 0.01, * p < 0.05, ns (not significant) otherwise."""
-    return "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "ns"
+def p_label(p):
+    """Significance stars (*** p < 0.001, ** p < 0.01, * p < 0.05, ns = not significant) with the p-value."""
+    stars = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "ns"
+    value = "< 0.0001" if p < 1e-4 else f"= {p:.2g}"
+    return f"{stars} (p {value})"
 
 
-def tukey_brackets(pairwise, centre, base, step):
-    """One bracket per pairwise test, between the two groups' centres: the narrowest lowest, each a step higher."""
-    t = pairwise.assign(x1=pairwise["a"].map(centre), x2=pairwise["b"].map(centre))
+def pair_brackets(pairwise, position, base, step):
+    """One bracket per test, between the positions of its two groups: the narrowest lowest, each a step higher."""
+    t = pairwise.assign(x1=pairwise["a"].map(position), x2=pairwise["b"].map(position))
     t = t.assign(span=t["x2"] - t["x1"]).sort_values(["span", "x1"])
-    return [{"x1": r.x1, "x2": r.x2, "y": base + k * step, "label": stars(r.p)} for k, r in enumerate(t.itertuples())]
+    return [{"x1": r.x1, "x2": r.x2, "y": base + k * step, "label": p_label(r.p)} for k, r in enumerate(t.itertuples())]
 
 
 def brackets(rows, x_scale, Y, drop):
@@ -195,7 +196,7 @@ save(alt.vconcat(*rows, spacing=6), "fig0_representative_images")
 
 # ---- Figure 1: dilution-response; each well's change as % of the strongest dilution, with the fitted curve -----
 W1, H1 = 520, 260
-resp = wells[wells["treatment"].isin(PROBES) & ~wells["treatment"].isin(S.BEFORE_AFTER)].copy()
+resp = wells[wells["treatment"].isin(PROBES)].copy()
 resp["D"] = resp["treatment"].str.extract(r"1:(\d+)")[0].astype(int)                     # dilution factor, 1:D
 resp["x"] = resp["D"] * 10 ** resp.groupby("D")["D"].transform(lambda s: spread(len(s), 0.04))   # side by side
 bars1 = pd.DataFrame([{"D": d, **mean_sd(w["dF_pct"])} for d, w in resp.groupby("D")])
@@ -240,15 +241,16 @@ for i, t in enumerate(groups):
 pairs = pd.DataFrame(rows)
 scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
 axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
-# significance: before vs after over each pair (paired t-test), then the changes compared between the
-# treatments (Tukey's test), stacked above
+# significance: before vs after over each pair (paired t-test), then the probe's after bar vs the negative
+# control's (Welch's t-test) above
 t2, top = tests[tests["figure"] == "fig2"], pairs[["mean", "hi"]].max().max()
-marks = [{"x1": i - 0.19, "x2": i + 0.19, "label": stars(r.p),
+marks = [{"x1": i - 0.19, "x2": i + 0.19, "label": p_label(r.p),
           "y": pairs.loc[pairs["group"] == i, ["mean", "hi"]].max().max() + 0.06 * top}
          for r in t2[t2["test"].str.startswith("paired")].itertuples() for i in [groups.index(r.a)]]
-marks += tukey_brackets(t2[t2["test"].str.startswith("Tukey")], {t: i for i, t in enumerate(groups)},
-                        1.2 * top, 0.13 * top)
-Y2 = linear_y(min(pairs["lo"].min(), 0), max(m["y"] for m in marks) + 0.12 * top, YLAB, tick_hi=1.05 * top)
+marks += pair_brackets(t2[t2["test"].str.startswith("Welch")], {t: i + 0.19 for i, t in enumerate(groups)},
+                       1.2 * top, 0.13 * top)
+Y2 = linear_y(min(pairs["lo"].min(), 0), max(m["y"] for m in marks) + 0.12 * top, "Normalized bead fluorescence",
+              tick_hi=1.05 * top)
 fig2 = alt.layer(
     alt.Chart(pairs).mark_rect(strokeWidth=1.2).encode(
         alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
@@ -271,7 +273,7 @@ positive = pd.DataFrame([{"x": i, "x0": i - 0.3, "x1": i + 0.3, "zero": 0, "fill
 positive[["lo", "hi"]] = positive[["lo", "hi"]].clip(0, 100)      # a percentage stays within 0 to 100
 scale3x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
 axis3x = axis_labels({i: x_label(t) for i, t in enumerate(groups)}, title="C2-GFP dilution ratio")
-marks = tukey_brackets(tests[tests["figure"] == "fig3"], {t: i for i, t in enumerate(groups)}, 108, 11)
+marks = pair_brackets(tests[tests["figure"] == "fig3"], {t: i for i, t in enumerate(groups)}, 108, 11)
 Y3 = linear_y(0, max(m["y"] for m in marks) + 12, "Positive beads (%)", tick_hi=100)
 fig3 = alt.layer(
     alt.Chart(positive).mark_rect().encode(alt.X("x0:Q", scale=scale3x, axis=axis3x), Y3("mean"), x2="x1:Q",
@@ -282,7 +284,7 @@ fig3 = alt.layer(
 save(fig3, "fig3_positive_beads")
 
 # ---- Figure 4: each well's change in fluorescence, with the mean ± SD centred on the wells ------------------
-groups = [t for t in PROBES if t not in S.BEFORE_AFTER]
+groups = PROBES
 W4, H4 = 70 * len(groups), 260
 change = wells[wells["treatment"].isin(groups)].copy()
 change["x"] = change["treatment"].map(groups.index) + change.groupby("treatment")["well_name"].transform(
@@ -291,7 +293,7 @@ bars4 = pd.DataFrame([{"x": i, **mean_sd(change.loc[change["treatment"] == t, "d
 scale4x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
 axis4x = axis_labels({i: x_label(t) for i, t in enumerate(groups)}, title="C2-GFP dilution ratio")
 Y4 = linear_y(*padded(min(change["dF"].min(), bars4["lo"].min(), 0), max(change["dF"].max(), bars4["hi"].max())),
-              "Δ fluorescence (counts)")
+              "Δ normalized fluorescence")
 fig4 = alt.layer(
     alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(Y4("y")),
     alt.Chart(change).mark_point(**FILLED).encode(alt.X("x:Q", scale=scale4x, axis=axis4x), Y4("dF"), fill=FILL),
