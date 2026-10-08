@@ -7,6 +7,7 @@ Saves PNG (300 dpi) and SVG files to results/analysis:
   fig1_dilution_response       each well's change as % of the strongest dilution, mean ± SD, fitted curve
   fig2_before_after            mean fluorescence before and after, for the treatments in settings.BEFORE_AFTER
   fig3_positive_beads          % of beads positive after treatment, for the dilutions in settings.POSITIVE_BEADS
+and figures.html, every figure on one page (images embedded, so the file opens and can be shared on its own).
 """
 import base64
 import io
@@ -117,6 +118,9 @@ def mean_sd(values):
     return {"mean": m, "lo": m - sd, "hi": m + sd}
 
 
+SAVED = []                                         # figure names, in the order saved, for figures.html
+
+
 def save(chart, name):
     chart = (chart.configure(font=FONT, background="white", padding=6)
              .configure_view(stroke=None)
@@ -127,6 +131,7 @@ def save(chart, name):
              .configure_axisY(grid=True))
     chart.save(OUT / f"{name}.png", scale_factor=300 / 72)
     chart.save(OUT / f"{name}.svg")
+    SAVED.append(name)
     print(f"  {name}")
 
 
@@ -239,5 +244,25 @@ fig3 = alt.layer(
     *error_bars(positive, alt.X("x:Q", scale=scale3x), Y3),
 ).properties(width=W3, height=H3)
 save(fig3, "fig3_positive_beads")
+
+# ---- every figure on one page, each at its printed size (300 dpi PNG shown at 96 CSS pixels per inch) ------
+body = ""
+for name in SAVED:
+    png = OUT / f"{name}.png"
+    width = round(Image.open(png).width * 96 / 300)
+    body += (f'<figure><img src="data:image/png;base64,{base64.b64encode(png.read_bytes()).decode()}" '
+             f'width="{width}" alt="{name}"><figcaption>Figure {name[3]} ({png.name})</figcaption></figure>\n')
+(OUT / "figures.html").write_text(f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bead analysis figures</title>
+<style>
+body {{ font-family: {FONT}; background: white; color: {INK}; max-width: 1240px; margin: 32px auto; padding: 0 16px; }}
+figure {{ margin: 0 0 48px; }}
+img {{ max-width: 100%; height: auto; display: block; }}
+figcaption {{ color: {INK2}; font-size: 14px; margin-top: 8px; }}
+</style></head><body>
+{body}</body></html>
+""", encoding="utf-8")
+print("  figures.html")
 
 print(f"Figures done. In {OUT}")

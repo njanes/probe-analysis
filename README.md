@@ -242,7 +242,7 @@ probe-analysis/
 ├── images/                 the images analysed, both experiments, renamed (name_map.csv gives the original names)
 └── results/                macro output: bead_measurements.csv, segmentation_log.csv, qc/, rois/, figure_images/,
                             settings_used.txt
-    └── analysis/           Python output: tables, stats_report.txt (full statistics), figures
+    └── analysis/           Python output: tables, stats_report.txt (full statistics), figures, figures.html (all on one page)
 ```
 
 Requires Fiji (it includes Bio-Formats, which opens .oir files) and Python 3.10 or newer with the
