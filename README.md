@@ -248,20 +248,49 @@ and saturation caps the SNR of the brightest beads as well.
 | Out-of-focus beads, many in clumps of stacked beads | Left out, so fewer beads are measured per well. | Let beads settle fully before imaging, use fewer beads per well to avoid stacking, and focus on the bead equator. |
 | Experiment 1 file labelling errors and missing positions | Corrected from the plate map; some wells have 2 images instead of 3. | Use file codes that match the dilutions and check each well's name before saving. |
 
+## Second study (study2 folder)
+
+Two further runs, analysed together in the `study2` folder with their own settings
+(`study2/settings.py`), so the first study's results above are unchanged. The images are used with the
+names they were saved under. The two runs used different words for three of the treatments; each word
+is mapped to one treatment name, and a well imaged in both runs is one well, with the second run's
+images as further images of it.
+
+| Wells | Treatment | Words in the file names |
+|---|---|---|
+| W1 to W3 | Negative control (MFG-E8) | `negctrlMFGE8`, `Mnegvectrl_1to1000` |
+| W4 to W6 | Negative control (GFP) | `negctrlGFP`, `Mgfponly_1to1000` |
+| W7 to W9 | Annexin-V | `annexin`, `Mposctrl_1to1000` |
+| W10 | Probe 1:1000 | `1to1000` |
+| W12 and W13 | Positive control (BSA precoat) | `posctrlBSAprecoat` |
+| W14 and W15 | Probe 1:3333 | `1to3333` |
+| W16 and W17 | Not analysed (marked `dontuse`) | `dontuse` |
+
+- Every image of a well is used (no limit per well), including those marked `(400HV)`. A position
+  saved twice (`_0001`) is checked as described below.
+- One image, `after_ Mgfponly_1to1000_W7_3 (400HV)`, reads as negative control (GFP) in W7, which
+  has no before images, so it isn't compared.
+- Figures 0, 2, 3 and 4 show every treatment. Figure 1 and Tests 1 to 3 need treatments this study
+  doesn't have (buffer only, a negative control at a probe dilution, and 3 or 4 probe dilutions), so
+  the report notes that they weren't run. Probe 1:1000 has a single well (W10), so it has no SD and
+  isn't tested; Tukey's test for fig3 needs at least 2 wells in every treatment shown, so fig3 has
+  no brackets.
+
 ## Files and re-running
 
 ```
 probe-analysis/
 ├── HOW_TO_RUN.md           short guide for the researcher: what each script does and how to run it
 ├── bead_segmentation.ijm   Fiji macro: finds the beads and measures their fluorescence
-├── settings.py             treatment names, images to leave out, images per well, detector maximum
+├── settings.py             treatment names, images to leave out, images per well, detector maximum, figures
 ├── analyze.py              labels the files, picks the images, calculates results, runs the statistics
 ├── make_figures.py         makes the figures from analyze.py's tables
 ├── data/                   original experiment 1 .oir images, with their original names
 ├── images/                 the images analysed, both experiments, renamed (name_map.csv gives the original names)
-└── results/                macro output: bead_measurements.csv, segmentation_log.csv, qc/, rois/, figure_images/,
-                            settings_used.txt
-    └── analysis/           Python output: tables, stats_report.txt (full statistics), figures, figures.html (all on one page)
+├── results/                macro output: bead_measurements.csv, segmentation_log.csv, qc/, rois/, figure_images/,
+│                           settings_used.txt
+│   └── analysis/           Python output: tables, stats_report.txt (full statistics), figures, figures.html (all on one page)
+└── study2/                 the second study: its settings.py, and its own images/ and results/ laid out as above
 ```
 
 Requires Fiji (it includes Bio-Formats, which opens .oir files) and Python 3.10 or newer with the
@@ -271,27 +300,45 @@ packages in `requirements.txt`.
    (recorded in `results/settings_used.txt`).
 2. From the project folder: `python3 analyze.py`, then `python3 make_figures.py`.
 
+A study in its own folder (such as `study2`) has its own `settings.py`, `images` and `results`; name the
+folder when running the scripts: `python3 analyze.py study2`, then `python3 make_figures.py study2`.
+New images and results folders are left out of git (`.gitignore`), so pulling an update never
+changes them.
+
 **Adding images.** The analysis reads everything it needs from the file names, so new images that
 follow the naming convention are added to the tables, tests and figures automatically: copy them
-into `images` and re-run both steps on the whole folder. Nothing in the code or `settings.py` needs
-changing. The text and tables of this README are written by hand, so update them from
-`results/analysis/stats_report.txt`.
+into the study's `images` folder and re-run both steps on the whole folder. Nothing in the code needs
+changing; a treatment word not seen before is added to `GROUPS` in the study's `settings.py` (the
+analysis stops and names any file it can't read). The text and tables of this README are written by
+hand, so update them from `results/analysis/stats_report.txt`.
 
 File names read as `{before or after}_{treatment}_W{well}_{position}.oir`, for example
-`after_probe-1to3333_W04_2.oir`:
+`after_probe-1to3333_W04_2.oir`. Capital letters and spaces are ignored and a doubled underscore
+counts as one, so `before__1to1000_W10_2.oir` and `after_ Mposctrl_1to1000_W9_3 (400HV).oir` read
+like the others.
 
-- **Treatment:** `buffer`, `negctrl` or `probe`, followed by the dilution if there is one
+- **Treatment:** a word listed in `GROUPS` in the study's `settings.py`, which gives its name. In
+  the first study, `buffer`, `negctrl` or `probe`, followed by the dilution if there is one
   (`probe-1to3333` = probe 1:3333). A before image that is the baseline for several dilutions lists
-  them all (`probe-1to3333-5000-10000`). Tables and figures show the controls first, then the probe
-  dilutions from most to least diluted.
+  them all (`probe-1to3333-5000-10000`). A word set to `None` is left out. Tables and figures show
+  the treatments in `GROUPS` order, each kind's dilutions from most to least diluted.
 - **Well:** a well is identified by its number and treatment, so repeating a treatment needs well
-  numbers not yet used for that treatment.
-- **Position:** a number, with "b" for a second field at the same position. `background` in place
-  of the position marks a background image, which is left out. Each well uses at most 3 images per
-  timepoint (those with the most beads).
+  numbers not yet used for that treatment. Two words with the same name share their wells.
+- **Position:** a number, with "b" for a second field at the same position, and optionally a note
+  in brackets (`(400HV)`), which marks a separate image. `background` in place of the position (or
+  as the whole name) marks a background image, which is left out. Each well uses at most
+  `MAX_IMAGES_PER_WELL` images per timepoint (3 in the first study, those with the most beads; no
+  limit in `study2`).
+- **Saved twice:** a position saved again (`_0001`, `_0002`) is checked by bead positions. If most
+  beads of the later save lie within 2 µm of beads of the earlier one, it is the same field retaken
+  and only the latest save is used; otherwise each save is used as a field of its own. The report
+  lists each decision.
 - A well is compared once it has images at both timepoints. Test 1 compares every probe dilution
-  with buffer, Test 2 each negative control with the probe at the same dilution, and Test 3 runs over
-  every probe well.
+  ("Probe 1:N") with "Buffer only", Test 2 each "Negative control 1:N" with the probe at the same
+  dilution, and Test 3 runs over every probe well (at least 3 dilutions); a test runs only when the
+  study has the treatments it needs. The fig1 curve needs at least 4 probe dilutions.
+- `BEFORE_AFTER`, `POSITIVE_BEADS` and `CHANGE_PER_WELL` in `settings.py` choose the treatments in
+  figs 2, 3 and 4 (`None` = all). `FIGURE_NAMES` relabels a treatment in the figures.
 - To leave out an image for another reason, add it to `EXCLUDE` in `settings.py` with the reason.
 
 **Measurement settings** (1 pixel = 0.104 µm): beads kept if 3.8 to 7 µm across in transmitted

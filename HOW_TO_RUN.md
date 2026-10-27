@@ -8,7 +8,11 @@ There are three steps, run in this order. Each one uses what the step before it 
 | 2 | `analyze.py` | Turns those measurements into a result for each well and treatment, and runs the statistics. |
 | 3 | `make_figures.py` | Makes the figures from those results. |
 
-`settings.py` holds a few fixed settings the two Python scripts share. You don't need to run or change it.
+`settings.py` holds a few fixed settings the two Python scripts share (`study2/settings.py` for the
+second study). You don't need to run or change it.
+
+To get the latest version of the scripts, run `git pull` in the terminal in this folder. It doesn't
+touch your `images` or `results` folders.
 
 ## Before the first run
 
@@ -68,3 +72,19 @@ in orange.
 
 The new images are added to the results and figures automatically. `README.md` has the full details
 of the analysis.
+
+## Running the second study
+
+The second study (both of its runs) is analysed in its own folder, `study2`, so the results above stay
+as they are.
+
+1. In the `study2` folder, make a folder called `images` and copy in every image from both runs. Keep
+   the names they were saved under; don't rename anything. Then make an empty folder called `results`
+   in `study2` too.
+2. **Fiji macro:** run it as above, choosing `study2/images` first, then `study2/results`.
+3. **Analysis:** in the terminal, in this (the project) folder, run `python analyze.py study2`
+4. **Figures:** then run `python make_figures.py study2`
+
+Everything is in `study2/results/analysis`, laid out as above. There is no `fig1` for this study: the
+dilution-response curve needs at least 4 probe dilutions. `stats_report.txt` lists any image that
+wasn't used and why, and `study2/settings.py` shows how each treatment in the file names is read.

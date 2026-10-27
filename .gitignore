@@ -14,6 +14,7 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Raw data and large image output
+# Raw data and large image output (a study's images and results stay on the computer they're on)
 results/
+images/
 

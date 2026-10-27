@@ -1,20 +1,26 @@
 """
 make_figures.py: draws the figures from the tables analyze.py wrote (nothing is recalculated), with
-Altair. Run from the project folder, after analyze.py:   python3 make_figures.py
+Altair. Run from the project folder, after analyze.py, naming the same study folder if any:
+  python3 make_figures.py           or   python3 make_figures.py study2
 
-Saves PNG (300 dpi) and SVG files to results/analysis:
+Saves PNG (300 dpi) and SVG files to results/analysis (in the study's folder):
   fig0_representative_images   typical before/after image per treatment (green), one fixed display range
   fig1_dilution_response       each well's change as % of the strongest dilution, mean ± SD, fitted curve
+                               (only if analyze.py fitted the curve, which needs 4 probe dilutions)
   fig2_before_after            mean fluorescence before and after, for the treatments in settings.BEFORE_AFTER
-  fig3_positive_beads          % of beads positive after treatment, for the dilutions in settings.POSITIVE_BEADS
-  fig4_change_per_well         each well's change in fluorescence (after − before), mean ± SD
+  fig3_positive_beads          % of beads positive after treatment, for the treatments in settings.POSITIVE_BEADS
+  fig4_change_per_well         each well's change in fluorescence (after − before), mean ± SD, for the
+                               treatments in settings.CHANGE_PER_WELL
 and figures.html, every figure on one page (images embedded, so the file opens and can be shared on its own).
 """
 import base64
 import io
 import json
 import math
+import runpy
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import altair as alt
 import numpy as np
@@ -22,25 +28,33 @@ import pandas as pd
 import vl_convert
 from PIL import Image
 
-import settings as S
-
-RESULTS = Path("results")
+FOLDER = Path(sys.argv[1] if len(sys.argv) > 1 else ".")          # the study's folder, as for analyze.py
+S = SimpleNamespace(**runpy.run_path(str(FOLDER / "settings.py")))
+RESULTS = FOLDER / "results"
 OUT = RESULTS / "analysis"
 wells = pd.read_csv(OUT / "well_summary.csv")
 reps = pd.read_csv(OUT / "representative_images.csv")
-fit = pd.read_csv(OUT / "dilution_fit.csv").iloc[0]
+fit = pd.read_csv(OUT / "dilution_fit.csv")                       # no rows if the curve wasn't fitted
 tests = pd.read_csv(OUT / "figure_tests.csv")
 ORDER = list(dict.fromkeys(wells["treatment"]))  # treatments in display order, as analyze.py sorted the wells
-PROBES = [t for t in ORDER if t.startswith(S.KINDS["probe"])]
+PROBES = [t for t in ORDER if t.startswith("Probe 1:")]
 
 # ---- style: sizes are in points (1 chart unit = 1 pt), so PNGs are saved at 300/72 scale = 300 dpi ----
 INK, INK2, EDGE, GRID = "#0b0b0b", "#52514e", "#c3c2b7", "#e1e0d9"
 GREY, DARK_GREY = "#898781", "#5f5e5a"
 BLUES = ["#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95"]
-RGB = np.array([[int(c[i:i + 2], 16) for i in (1, 3, 5)] for c in BLUES])
-COLOR = {t: GREY if t == S.KINDS["buffer"] else DARK_GREY for t in ORDER if t not in PROBES}   # controls grey
-for t, at in zip(PROBES, np.linspace(0, len(BLUES) - 1, len(PROBES))):  # probe blues darken with less dilution
-    COLOR[t] = "#" + "".join(f"{round(np.interp(at, range(len(BLUES)), ch)):02x}" for ch in RGB.T)
+
+
+def ramp(anchors, n):
+    """n colors spread evenly along the anchor colors, from the first to the last."""
+    rgb = np.array([[int(c[i:i + 2], 16) for i in (1, 3, 5)] for c in anchors])
+    return ["#" + "".join(f"{round(np.interp(at, range(len(anchors)), ch)):02x}" for ch in rgb.T)
+            for at in np.linspace(0, len(anchors) - 1, n)]
+
+
+CONTROLS = [t for t in ORDER if t not in PROBES]
+COLOR = {**dict(zip(CONTROLS, ramp([GREY, DARK_GREY], len(CONTROLS)))),     # controls grey
+         **dict(zip(PROBES, ramp(BLUES, len(PROBES))))}                   # probe blues darken with less dilution
 FONT = "Arial, Helvetica, sans-serif"             # a list, so a missing font falls back instead of vanishing
 CSCALE = alt.Scale(domain=ORDER, range=[COLOR[t] for t in ORDER])
 FILL = alt.Fill("treatment:N", scale=CSCALE, legend=None)
@@ -48,12 +62,33 @@ FILLED = dict(shape="circle", filled=True, stroke="white", strokeWidth=1.2, size
 
 
 def x_label(t):
-    """A treatment's label, as lines: the probe by its dilution alone ("1:400"), buffer as "Annexin-V",
-    and a negative control by its dilution with "Negative control" below it."""
+    """A treatment's label, as lines: its name in settings.FIGURE_NAMES if it has one ("Buffer only" as
+    "Annexin-V"), the probe by its dilution alone ("1:400"), another treatment with a dilution by the dilution
+    with its name below it ("1:3333", "Negative control"), and a name with a note in brackets on two lines."""
     kind, _, dilution = t.partition(" 1:")
-    if kind == S.KINDS["buffer"]:
-        return ["Annexin-V"]
-    return [f"1:{dilution}"] if kind == S.KINDS["probe"] else [f"1:{dilution}", kind]
+    if t in S.FIGURE_NAMES:
+        return [S.FIGURE_NAMES[t]]
+    if dilution:
+        return [f"1:{dilution}"] if kind == "Probe" else [f"1:{dilution}", kind]
+    name, _, note = t.partition(" (")
+    return [name, f"({note}"] if note else [name]
+
+
+def chosen(setting):
+    """The treatments a figure setting names (a kind alone, such as "Probe", names all its dilutions), in
+    display order; None = every treatment."""
+    return [t for t in ORDER if setting is None or t in setting or t.partition(" 1:")[0] in setting]
+
+
+def slot(groups, least):
+    """Width per treatment in a bar chart: at least `least` points, and room for the longest label line (about
+    4.2 points a character at 8 pt)."""
+    return max([least] + [4.2 * len(line) + 20 for t in groups for line in x_label(t)])
+
+
+def dilution_title(groups):
+    """The x-axis title when every treatment shown is a probe dilution; none otherwise."""
+    return "C2-GFP dilution ratio" if set(groups) <= set(PROBES) else None
 
 
 if Path("/mnt/c/Windows/Fonts").is_dir():         # running in WSL: use the Windows fonts (e.g. Arial)
@@ -129,6 +164,8 @@ def pair_brackets(pairwise, position, base, step):
 
 def brackets(rows, x_scale, Y, drop):
     """Significance brackets: a line from x1 to x2 at height y, ends dropping by drop, and the label above."""
+    if not rows:
+        return []
     data = pd.DataFrame(rows)
     data["xm"], data["y_end"] = (data["x1"] + data["x2"]) / 2, data["y"] - drop
     rule = alt.Chart(data).mark_rule(color=INK, strokeWidth=0.8)
@@ -195,111 +232,118 @@ for start in range(0, len(ORDER), 5):
 save(alt.vconcat(*rows, spacing=6), "fig0_representative_images")
 
 # ---- Figure 1: dilution-response; each well's change as % of the strongest dilution, with the fitted curve -----
-W1, H1 = 520, 260
-resp = wells[wells["treatment"].isin(PROBES)].copy()
-resp["D"] = resp["treatment"].str.extract(r"1:(\d+)")[0].astype(int)                     # dilution factor, 1:D
-resp["x"] = resp["D"] * 10 ** resp.groupby("D")["D"].transform(lambda s: spread(len(s), 0.04))   # side by side
-bars1 = pd.DataFrame([{"D": d, **mean_sd(w["dF_pct"])} for d, w in resp.groupby("D")])
-dils = sorted(resp["D"].unique(), reverse=True)
-dom1x = [dils[0] * 1.6, dils[-1] / 1.6]                       # less diluted to the right
-curve = pd.DataFrame({"x": np.logspace(math.log10(dom1x[1]), math.log10(dom1x[0]), 200)})
-curve["y"] = fit.bottom + (fit.top - fit.bottom) / (1 + (curve["x"] / fit.D50) ** fit.hill)
-# dilution labels; one that would overlap the label before it (at about 4.2 points a character) moves to a
-# second line
-labels, prev = {}, None                            # prev = (x in points, label) of the last first-line label
-for d in dils:
-    x, lab = W1 * math.log(dom1x[0] / d) / math.log(dom1x[0] / dom1x[1]), f"1:{d}"
-    if prev and x - prev[0] < 2.1 * (len(lab) + len(prev[1])):
-        labels[d] = ["", lab]
-    else:
-        labels[d], prev = lab, (x, lab)
-scale1x = alt.Scale(type="log", domain=dom1x, nice=False)
-axis1x = axis_labels(labels, size=7.5, labelOverlap=False, title="C2-GFP dilution ratio")
-Y1 = linear_y(*padded(min(bars1["lo"].min(), resp["dF_pct"].min(), curve["y"].min(), 0),
-                      max(bars1["hi"].max(), resp["dF_pct"].max(), curve["y"].max())), "% fluorescence")
-equation = (f"y = {fit.bottom:.1f} + {fit.top - fit.bottom:.1f} / (1 + (D / {fit.D50:.0f})^{fit.hill:.2f})"
-            .replace("-", "−") + f"\nD = dilution factor (1:D); R² = {fit.r_squared:.2f}")
-fig1 = alt.layer(
-    alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(Y1("y")),
-    alt.Chart(curve).mark_line(color=INK2, strokeWidth=1.2).encode(alt.X("x:Q", scale=scale1x, axis=axis1x), Y1("y")),
-    alt.Chart(resp).mark_point(**FILLED).encode(alt.X("x:Q", scale=scale1x), Y1("dF_pct"), fill=FILL),
-    *error_bars(bars1, alt.X("D:Q", scale=scale1x), Y1, mean_width=14),
-    text_at(equation, 8, 8, align="left", baseline="top", lineBreak="\n", fontSize=8.5, color=INK2),
-).properties(width=W1, height=H1)
-save(fig1, "fig1_dilution_response")
+if len(fit):                                       # analyze.py fits the curve only with 4 or more probe dilutions
+    fit = fit.iloc[0]
+    W1, H1 = 520, 260
+    resp = wells[wells["treatment"].isin(PROBES)].copy()
+    resp["D"] = resp["treatment"].str.extract(r"1:(\d+)")[0].astype(int)                     # dilution factor, 1:D
+    resp["x"] = resp["D"] * 10 ** resp.groupby("D")["D"].transform(lambda s: spread(len(s), 0.04))   # side by side
+    bars1 = pd.DataFrame([{"D": d, **mean_sd(w["dF_pct"])} for d, w in resp.groupby("D")])
+    dils = sorted(resp["D"].unique(), reverse=True)
+    dom1x = [dils[0] * 1.6, dils[-1] / 1.6]                       # less diluted to the right
+    curve = pd.DataFrame({"x": np.logspace(math.log10(dom1x[1]), math.log10(dom1x[0]), 200)})
+    curve["y"] = fit.bottom + (fit.top - fit.bottom) / (1 + (curve["x"] / fit.D50) ** fit.hill)
+    # dilution labels; one that would overlap the label before it (at about 4.2 points a character) moves to a
+    # second line
+    labels, prev = {}, None                        # prev = (x in points, label) of the last first-line label
+    for d in dils:
+        x, lab = W1 * math.log(dom1x[0] / d) / math.log(dom1x[0] / dom1x[1]), f"1:{d}"
+        if prev and x - prev[0] < 2.1 * (len(lab) + len(prev[1])):
+            labels[d] = ["", lab]
+        else:
+            labels[d], prev = lab, (x, lab)
+    scale1x = alt.Scale(type="log", domain=dom1x, nice=False)
+    axis1x = axis_labels(labels, size=7.5, labelOverlap=False, title="C2-GFP dilution ratio")
+    Y1 = linear_y(*padded(min(bars1["lo"].min(), resp["dF_pct"].min(), curve["y"].min(), 0),
+                          max(bars1["hi"].max(), resp["dF_pct"].max(), curve["y"].max())), "% fluorescence")
+    equation = (f"y = {fit.bottom:.1f} + {fit.top - fit.bottom:.1f} / (1 + (D / {fit.D50:.0f})^{fit.hill:.2f})"
+                .replace("-", "−") + f"\nD = dilution factor (1:D); R² = {fit.r_squared:.2f}")
+    fig1 = alt.layer(
+        alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(Y1("y")),
+        alt.Chart(curve).mark_line(color=INK2, strokeWidth=1.2).encode(alt.X("x:Q", scale=scale1x, axis=axis1x),
+                                                                        Y1("y")),
+        alt.Chart(resp).mark_point(**FILLED).encode(alt.X("x:Q", scale=scale1x), Y1("dF_pct"), fill=FILL),
+        *error_bars(bars1, alt.X("D:Q", scale=scale1x), Y1, mean_width=14),
+        text_at(equation, 8, 8, align="left", baseline="top", lineBreak="\n", fontSize=8.5, color=INK2),
+    ).properties(width=W1, height=H1)
+    save(fig1, "fig1_dilution_response")
 
 # ---- Figure 2: mean fluorescence before and after, paired bars ----------------------------------------------
-groups = [t for t in ORDER if t in S.BEFORE_AFTER]
-W2, H2 = 110 * len(groups), 320
-rows = []
-for i, t in enumerate(groups):
-    w = wells[wells["treatment"] == t]
-    for tp, dx in (("before", -0.19), ("after", 0.19)):           # before: open bar; after: filled
-        rows.append({"group": i, "timepoint": tp, "x": i + dx, "x0": i + dx - 0.16, "x1": i + dx + 0.16, "zero": 0,
-                     **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else COLOR[t],
-                     "stroke": GREY if tp == "before" else COLOR[t]})
-pairs = pd.DataFrame(rows)
-scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
-axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
-# significance: before vs after over each pair (paired t-test), then the probe's after bar vs the negative
-# control's (Welch's t-test) above
-t2, top = tests[tests["figure"] == "fig2"], pairs[["mean", "hi"]].max().max()
-marks = [{"x1": i - 0.19, "x2": i + 0.19, "label": p_label(r.p),
-          "y": pairs.loc[pairs["group"] == i, ["mean", "hi"]].max().max() + 0.06 * top}
-         for r in t2[t2["test"].str.startswith("paired")].itertuples() for i in [groups.index(r.a)]]
-marks += pair_brackets(t2[t2["test"].str.startswith("Welch")], {t: i + 0.19 for i, t in enumerate(groups)},
-                       1.2 * top, 0.13 * top)
-Y2 = linear_y(min(pairs["lo"].min(), 0), max(m["y"] for m in marks) + 0.12 * top, "Normalized bead fluorescence",
-              tick_hi=1.05 * top)
-fig2 = alt.layer(
-    alt.Chart(pairs).mark_rect(strokeWidth=1.2).encode(
-        alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
-        fill=alt.Fill("fill:N", scale=None), stroke=alt.Stroke("stroke:N", scale=None)),
-    *error_bars(pairs, alt.X("x:Q", scale=scale2x), Y2),
-    *brackets(marks, scale2x, Y2, drop=0.025 * top),
-    # treatment names under the before/after labels
-    alt.Chart(pd.DataFrame({"x": range(len(groups)), "t": ["\n".join(x_label(t)) for t in groups]})).mark_text(
-        baseline="top", lineBreak="\n", fontSize=8, color=INK).encode(
-        x=alt.X("x:Q", scale=scale2x), y=alt.value(H2 + 20), text="t:N"),
-).properties(width=W2, height=H2)
-save(fig2, "fig2_before_after")
+groups = chosen(S.BEFORE_AFTER)
+if groups:
+    W2, H2 = slot(groups, 110) * len(groups), 320
+    rows = []
+    for i, t in enumerate(groups):
+        w = wells[wells["treatment"] == t]
+        for tp, dx in (("before", -0.19), ("after", 0.19)):           # before: open bar; after: filled
+            rows.append({"group": i, "timepoint": tp, "x": i + dx, "x0": i + dx - 0.16, "x1": i + dx + 0.16,
+                         "zero": 0, **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else COLOR[t],
+                         "stroke": GREY if tp == "before" else COLOR[t]})
+    pairs = pd.DataFrame(rows)
+    scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
+    axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
+    # significance: before vs after over each pair (paired t-test), then the probe's after bar vs the negative
+    # control's (Welch's t-test) above
+    t2, top = tests[tests["figure"] == "fig2"], pairs[["mean", "hi"]].max().max()
+    marks = [{"x1": i - 0.19, "x2": i + 0.19, "label": p_label(r.p),
+              "y": pairs.loc[pairs["group"] == i, ["mean", "hi"]].max().max() + 0.06 * top}
+             for r in t2[t2["test"].str.startswith("paired")].itertuples() for i in [groups.index(r.a)]]
+    marks += pair_brackets(t2[t2["test"].str.startswith("Welch")], {t: i + 0.19 for i, t in enumerate(groups)},
+                           1.2 * top, 0.13 * top)
+    Y2 = linear_y(min(pairs["lo"].min(), 0), max([m["y"] for m in marks], default=top) + 0.12 * top,
+                  "Normalized bead fluorescence", tick_hi=1.05 * top)
+    fig2 = alt.layer(
+        alt.Chart(pairs).mark_rect(strokeWidth=1.2).encode(
+            alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
+            fill=alt.Fill("fill:N", scale=None), stroke=alt.Stroke("stroke:N", scale=None)),
+        *error_bars(pairs, alt.X("x:Q", scale=scale2x), Y2),
+        *brackets(marks, scale2x, Y2, drop=0.025 * top),
+        # treatment names under the before/after labels
+        alt.Chart(pd.DataFrame({"x": range(len(groups)), "t": ["\n".join(x_label(t)) for t in groups]})).mark_text(
+            baseline="top", lineBreak="\n", fontSize=8, color=INK).encode(
+            x=alt.X("x:Q", scale=scale2x), y=alt.value(H2 + 20), text="t:N"),
+    ).properties(width=W2, height=H2)
+    save(fig2, "fig2_before_after")
 
 # ---- Figure 3: % of beads positive after treatment --------------------------------------------------------
-groups = [t for t in ORDER if t in S.POSITIVE_BEADS]
-W3, H3 = 90 * len(groups), 320
-positive = pd.DataFrame([{"x": i, "x0": i - 0.3, "x1": i + 0.3, "zero": 0, "fill": COLOR[t],
-                          **mean_sd(wells.loc[wells["treatment"] == t, "pct_positive_after"])}
-                         for i, t in enumerate(groups)])
-positive[["lo", "hi"]] = positive[["lo", "hi"]].clip(0, 100)      # a percentage stays within 0 to 100
-scale3x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
-axis3x = axis_labels({i: x_label(t) for i, t in enumerate(groups)}, title="C2-GFP dilution ratio")
-marks = pair_brackets(tests[tests["figure"] == "fig3"], {t: i for i, t in enumerate(groups)}, 108, 11)
-Y3 = linear_y(0, max(m["y"] for m in marks) + 12, "Positive beads (%)", tick_hi=100)
-fig3 = alt.layer(
-    alt.Chart(positive).mark_rect().encode(alt.X("x0:Q", scale=scale3x, axis=axis3x), Y3("mean"), x2="x1:Q",
-                                           y2="zero:Q", fill=alt.Fill("fill:N", scale=None)),
-    *error_bars(positive, alt.X("x:Q", scale=scale3x), Y3),
-    *brackets(marks, scale3x, Y3, drop=2.5),
-).properties(width=W3, height=H3)
-save(fig3, "fig3_positive_beads")
+groups = chosen(S.POSITIVE_BEADS)
+if groups:
+    W3, H3 = slot(groups, 90) * len(groups), 320
+    positive = pd.DataFrame([{"x": i, "x0": i - 0.3, "x1": i + 0.3, "zero": 0, "fill": COLOR[t],
+                              **mean_sd(wells.loc[wells["treatment"] == t, "pct_positive_after"])}
+                             for i, t in enumerate(groups)])
+    positive[["lo", "hi"]] = positive[["lo", "hi"]].clip(0, 100)      # a percentage stays within 0 to 100
+    scale3x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
+    axis3x = axis_labels({i: x_label(t) for i, t in enumerate(groups)}, title=dilution_title(groups))
+    marks = pair_brackets(tests[tests["figure"] == "fig3"], {t: i for i, t in enumerate(groups)}, 108, 11)
+    Y3 = linear_y(0, max([m["y"] for m in marks], default=100) + 12, "Positive beads (%)", tick_hi=100)
+    fig3 = alt.layer(
+        alt.Chart(positive).mark_rect().encode(alt.X("x0:Q", scale=scale3x, axis=axis3x), Y3("mean"), x2="x1:Q",
+                                               y2="zero:Q", fill=alt.Fill("fill:N", scale=None)),
+        *error_bars(positive, alt.X("x:Q", scale=scale3x), Y3),
+        *brackets(marks, scale3x, Y3, drop=2.5),
+    ).properties(width=W3, height=H3)
+    save(fig3, "fig3_positive_beads")
 
 # ---- Figure 4: each well's change in fluorescence, with the mean ± SD centred on the wells ------------------
-groups = PROBES
-W4, H4 = 70 * len(groups), 260
-change = wells[wells["treatment"].isin(groups)].copy()
-change["x"] = change["treatment"].map(groups.index) + change.groupby("treatment")["well_name"].transform(
-    lambda s: spread(len(s), 0.12))                                          # a treatment's wells side by side
-bars4 = pd.DataFrame([{"x": i, **mean_sd(change.loc[change["treatment"] == t, "dF"])} for i, t in enumerate(groups)])
-scale4x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
-axis4x = axis_labels({i: x_label(t) for i, t in enumerate(groups)}, title="C2-GFP dilution ratio")
-Y4 = linear_y(*padded(min(change["dF"].min(), bars4["lo"].min(), 0), max(change["dF"].max(), bars4["hi"].max())),
-              "Δ normalized fluorescence")
-fig4 = alt.layer(
-    alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(Y4("y")),
-    alt.Chart(change).mark_point(**FILLED).encode(alt.X("x:Q", scale=scale4x, axis=axis4x), Y4("dF"), fill=FILL),
-    *error_bars(bars4, alt.X("x:Q", scale=scale4x), Y4, mean_width=14),
-).properties(width=W4, height=H4)
-save(fig4, "fig4_change_per_well")
+groups = chosen(S.CHANGE_PER_WELL)
+if groups:
+    W4, H4 = slot(groups, 70) * len(groups), 260
+    change = wells[wells["treatment"].isin(groups)].copy()
+    change["x"] = change["treatment"].map(groups.index) + change.groupby("treatment")["well_name"].transform(
+        lambda s: spread(len(s), 0.12))                                      # a treatment's wells side by side
+    bars4 = pd.DataFrame([{"x": i, **mean_sd(change.loc[change["treatment"] == t, "dF"])}
+                          for i, t in enumerate(groups)])
+    scale4x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
+    axis4x = axis_labels({i: x_label(t) for i, t in enumerate(groups)}, title=dilution_title(groups))
+    Y4 = linear_y(*padded(min(change["dF"].min(), bars4["lo"].min(), 0),
+                          max(change["dF"].max(), bars4["hi"].max())), "Δ normalized fluorescence")
+    fig4 = alt.layer(
+        alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(Y4("y")),
+        alt.Chart(change).mark_point(**FILLED).encode(alt.X("x:Q", scale=scale4x, axis=axis4x), Y4("dF"), fill=FILL),
+        *error_bars(bars4, alt.X("x:Q", scale=scale4x), Y4, mean_width=14),
+    ).properties(width=W4, height=H4)
+    save(fig4, "fig4_change_per_well")
 
 # ---- every figure on one page, each at its printed size (300 dpi PNG shown at 96 CSS pixels per inch) ------
 body = ""
