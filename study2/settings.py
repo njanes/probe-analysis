@@ -61,6 +61,8 @@ BEFORE_AFTER = {
     },
 }
 
+WELL_DOTS = True                   # a dot for each well on the before/after bars
+
 # No other figures for this study
 REPRESENTATIVE_IMAGES = []         # fig0
 POSITIVE_BEADS = []                # fig3

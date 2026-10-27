@@ -28,6 +28,7 @@ SATURATION = 4095                  # detector maximum (12-bit); a bead with any 
 BEFORE_AFTER = {"fig2_before_after": {"Buffer only": ["Buffer only"],
                                       "Negative control 1:3333": ["Negative control 1:3333"],
                                       "Probe 1:3333": ["Probe 1:3333"]}}
+WELL_DOTS = False                  # a dot for each well on the before/after bars
 
 # Treatments in the other figures: treatment names (a name without its dilution, such as "Probe", takes in all of
 # its dilutions), None for every treatment, or [] for no figure

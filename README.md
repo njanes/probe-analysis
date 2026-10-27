@@ -268,7 +268,7 @@ Each run's wells are its own: the second run's treatment names end in ", second 
 | Second | W7 to W9 | Annexin-V | `Mposctrl_1to1000` |
 
 Three figures, each in the style of fig2 above (before and after bars, mean ± SD of the wells, paired
-t-test brackets):
+t-test brackets), with a dot for each well on the bars:
 
 - **fig2_before_after:** the first study's fig2 with this study's wells added. Annexin-V holds the
   first study's buffer-only wells (W10 to W12), the first run's W7 to W9 and the second run's W9;

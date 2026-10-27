@@ -277,39 +277,45 @@ if len(fit):                                       # analyze.py fits the curve o
     save(fig1, "fig1_dilution_response")
 
 # ---- Before/after charts (fig2 and any others in settings.BEFORE_AFTER): mean fluorescence, paired bars -------
-# A bar pools the wells analyze.py listed for it in before_after_wells.csv. Probe bars keep their dilution's blue;
-# the other bars are greys, lightest first.
+# A bar pools the wells analyze.py listed for it in before_after_wells.csv, shown as dots if settings.WELL_DOTS.
+# Probe bars keep their dilution's blue; the other bars are greys, lightest first.
 pooled = pd.read_csv(OUT / "before_after_wells.csv") if S.BEFORE_AFTER else None
 for fig, figure_bars in S.BEFORE_AFTER.items():
     groups = list(figure_bars)
     greys = [t for t in groups if t not in PROBES]
     shade = {**dict(zip(greys, ramp([GREY, DARK_GREY], len(greys)))), **{t: COLOR[t] for t in groups if t in PROBES}}
     W2, H2 = slot(groups, 110) * len(groups), 320
-    rows = []
+    rows, dots = [], []
     for i, t in enumerate(groups):
         w = pooled[(pooled["figure"] == fig) & (pooled["bar"] == t)]
         for tp, dx in (("before", -0.19), ("after", 0.19)):           # before: open bar; after: filled
             rows.append({"group": i, "timepoint": tp, "x": i + dx, "x0": i + dx - 0.16, "x1": i + dx + 0.16,
                          "zero": 0, **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else shade[t],
                          "stroke": GREY if tp == "before" else shade[t]})
+            # a dot per well, side by side across the bar (a well keeps its place in the before and after bars)
+            dots += [{"group": i, "x": i + dx + off, "y": y} for off, y in zip(spread(len(w), 0.11), w[f"F_{tp}"])]
     pairs = pd.DataFrame(rows)
+    dots = pd.DataFrame(dots, columns=["group", "x", "y"]).iloc[:None if S.WELL_DOTS else 0]   # none if not shown
+    heights = pd.concat([pairs.melt("group", ["mean", "hi"], value_name="y")[["group", "y"]], dots[["group", "y"]]])
     scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
     axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
     # significance: before vs after over each pair (paired t-test), then the probe's after bar vs the negative
     # control's (Welch's t-test) above
-    t2, top = tests[tests["figure"] == fig.split("_")[0]], pairs[["mean", "hi"]].max().max()
+    t2, top = tests[tests["figure"] == fig.split("_")[0]], heights["y"].max()
     marks = [{"x1": i - 0.19, "x2": i + 0.19, "label": p_label(r.p),
-              "y": pairs.loc[pairs["group"] == i, ["mean", "hi"]].max().max() + 0.06 * top}
+              "y": heights.loc[heights["group"] == i, "y"].max() + 0.06 * top}
              for r in t2[t2["test"].str.startswith("paired")].itertuples() for i in [groups.index(r.a)]]
     marks += pair_brackets(t2[t2["test"].str.startswith("Welch")], {t: i + 0.19 for i, t in enumerate(groups)},
                            1.2 * top, 0.13 * top)
-    Y2 = linear_y(min(pairs["lo"].min(), 0), max([m["y"] for m in marks] + [top]) + 0.12 * top,
-                  "Normalized bead fluorescence", tick_hi=1.05 * top)
+    Y2 = linear_y(np.nanmin([pairs["lo"].min(), dots["y"].min(), 0]),
+                  max([m["y"] for m in marks] + [top]) + 0.12 * top, "Normalized bead fluorescence", tick_hi=1.05 * top)
     chart = alt.layer(
         alt.Chart(pairs).mark_rect(strokeWidth=1.2).encode(
             alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
             fill=alt.Fill("fill:N", scale=None), stroke=alt.Stroke("stroke:N", scale=None)),
         *error_bars(pairs, alt.X("x:Q", scale=scale2x), Y2),
+        *([alt.Chart(dots).mark_point(shape="circle", filled=True, fill=INK, stroke="white", strokeWidth=0.8, size=28,
+                                      opacity=1).encode(alt.X("x:Q", scale=scale2x), Y2("y"))] if len(dots) else []),
         *brackets(marks, scale2x, Y2, drop=0.025 * top),
         # treatment names under the before/after labels
         alt.Chart(pd.DataFrame({"x": range(len(groups)), "t": ["\n".join(x_label(t)) for t in groups]})).mark_text(
