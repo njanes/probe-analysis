@@ -24,8 +24,16 @@ MAX_IMAGES_PER_WELL = 3
 
 SATURATION = 4095                  # detector maximum (12-bit); a bead with any pixel at it is saturated
 
-# Treatments in each figure: treatment names (a name without its dilution, such as "Probe", takes in all of its
-# dilutions), or None for every treatment
-BEFORE_AFTER = ["Buffer only", "Negative control 1:3333", "Probe 1:3333"]      # fig2
+# Before/after bar charts: chart name -> {bar: the treatments whose wells the bar holds}
+BEFORE_AFTER = {"fig2_before_after": {"Buffer only": ["Buffer only"],
+                                      "Negative control 1:3333": ["Negative control 1:3333"],
+                                      "Probe 1:3333": ["Probe 1:3333"]}}
+
+# Treatments in the other figures: treatment names (a name without its dilution, such as "Probe", takes in all of
+# its dilutions), None for every treatment, or [] for no figure
+REPRESENTATIVE_IMAGES = None                                                   # fig0
 POSITIVE_BEADS = ["Probe 1:10000", "Probe 1:3333", "Probe 1:200"]              # fig3
 CHANGE_PER_WELL = ["Probe"]                                                    # fig4
+
+# Other studies whose wells the before/after charts can use: folder -> words added to its treatment names here
+OTHER_STUDIES = {}

@@ -4,10 +4,12 @@ Altair. Run from the project folder, after analyze.py, naming the same study fol
   python3 make_figures.py           or   python3 make_figures.py study2
 
 Saves PNG (300 dpi) and SVG files to results/analysis (in the study's folder):
-  fig0_representative_images   typical before/after image per treatment (green), one fixed display range
+  fig0_representative_images   typical before/after image per treatment (green), one fixed display range, for the
+                               treatments in settings.REPRESENTATIVE_IMAGES
   fig1_dilution_response       each well's change as % of the strongest dilution, mean ± SD, fitted curve
                                (only if analyze.py fitted the curve, which needs 4 probe dilutions)
-  fig2_before_after            mean fluorescence before and after, for the treatments in settings.BEFORE_AFTER
+  fig2_before_after            mean fluorescence before and after, for the bars in settings.BEFORE_AFTER (which
+                               can name further before/after charts in the same style)
   fig3_positive_beads          % of beads positive after treatment, for the treatments in settings.POSITIVE_BEADS
   fig4_change_per_well         each well's change in fluorescence (after − before), mean ± SD, for the
                                treatments in settings.CHANGE_PER_WELL
@@ -37,7 +39,11 @@ reps = pd.read_csv(OUT / "representative_images.csv")
 fit = pd.read_csv(OUT / "dilution_fit.csv")                       # no rows if the curve wasn't fitted
 tests = pd.read_csv(OUT / "figure_tests.csv")
 ORDER = list(dict.fromkeys(wells["treatment"]))  # treatments in display order, as analyze.py sorted the wells
-PROBES = [t for t in ORDER if t.startswith("Probe 1:")]
+# probe dilutions, most diluted first, including those of other studies the before/after charts use, so each
+# dilution has the same blue in every study
+OTHERS = [t for f in S.OTHER_STUDIES
+          for t in pd.read_csv(Path(f) / "results" / "analysis" / "well_summary.csv")["treatment"]]
+PROBES = sorted({t for t in ORDER + OTHERS if t.startswith("Probe 1:")}, key=lambda t: -int(t.split(":")[1]))
 
 # ---- style: sizes are in points (1 chart unit = 1 pt), so PNGs are saved at 300/72 scale = 300 dpi ----
 INK, INK2, EDGE, GRID = "#0b0b0b", "#52514e", "#c3c2b7", "#e1e0d9"
@@ -201,35 +207,37 @@ def save(chart, name):
 print("Making figures:")
 
 # ---- Figure 0: representative images (chosen by rule in analyze.py), shown in green, 5 treatments a row ----
-(OUT / "representative_images").mkdir(exist_ok=True)
-SIDE = 170                                         # panel size in points
-rows = []                                          # a before row and an after row for each 5 treatments
-for start in range(0, len(ORDER), 5):
-    for tp in ("before", "after"):
-        panels = []
-        for t in ORDER[start:start + 5]:
-            r = reps[(reps["treatment"] == t) & (reps["timepoint"] == tp)].iloc[0]
-            png = RESULTS / "figure_images" / f"{Path(r['file']).stem}_fluor.png"   # exported by the macro
-            g = Image.open(png).convert("RGB").getchannel("G")
-            black = Image.new("L", g.size, 0)
-            img = Image.merge("RGB", (black, g, black))          # grey to green, like Fiji's Green LUT
-            img.save(OUT / "representative_images" / png.name)  # full-resolution copy
-            img.thumbnail((1024, 1024), Image.LANCZOS)           # ample for a 2.4-inch panel at 300 dpi
-            buf = io.BytesIO()
-            img.save(buf, format="PNG")
-            uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
-            layers = [alt.Chart(pd.DataFrame({"u": [uri]})).mark_image(width=SIDE, height=SIDE).encode(
-                          url="u:N", x=alt.value(SIDE / 2), y=alt.value(SIDE / 2)),
-                      # well and position in white inside the image, so labels never overlap
-                      text_at(f"{r['well']}, position {r['position']}", 0.03 * SIDE, 0.03 * SIDE,
-                              align="left", baseline="top", fontSize=8, color="white")]
-            if t == ORDER[start]:                  # row label on the left
-                layers.append(text_at(tp.capitalize(), -6, SIDE / 2, angle=270, baseline="bottom", fontSize=10,
-                                      color=INK))
-            panel = alt.layer(*layers).properties(width=SIDE, height=SIDE)
-            panels.append(panel.properties(title=title(x_label(t), size=9)) if tp == "before" else panel)
-        rows.append(alt.hconcat(*panels, spacing=6))
-save(alt.vconcat(*rows, spacing=6), "fig0_representative_images")
+groups = chosen(S.REPRESENTATIVE_IMAGES)
+if groups:
+    (OUT / "representative_images").mkdir(exist_ok=True)
+    SIDE = 170                                         # panel size in points
+    rows = []                                          # a before row and an after row for each 5 treatments
+    for start in range(0, len(groups), 5):
+        for tp in ("before", "after"):
+            panels = []
+            for t in groups[start:start + 5]:
+                r = reps[(reps["treatment"] == t) & (reps["timepoint"] == tp)].iloc[0]
+                png = RESULTS / "figure_images" / f"{Path(r['file']).stem}_fluor.png"   # exported by the macro
+                g = Image.open(png).convert("RGB").getchannel("G")
+                black = Image.new("L", g.size, 0)
+                img = Image.merge("RGB", (black, g, black))          # grey to green, like Fiji's Green LUT
+                img.save(OUT / "representative_images" / png.name)  # full-resolution copy
+                img.thumbnail((1024, 1024), Image.LANCZOS)           # ample for a 2.4-inch panel at 300 dpi
+                buf = io.BytesIO()
+                img.save(buf, format="PNG")
+                uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+                layers = [alt.Chart(pd.DataFrame({"u": [uri]})).mark_image(width=SIDE, height=SIDE).encode(
+                              url="u:N", x=alt.value(SIDE / 2), y=alt.value(SIDE / 2)),
+                          # well and position in white inside the image, so labels never overlap
+                          text_at(f"{r['well']}, position {r['position']}", 0.03 * SIDE, 0.03 * SIDE,
+                                  align="left", baseline="top", fontSize=8, color="white")]
+                if t == groups[start]:                  # row label on the left
+                    layers.append(text_at(tp.capitalize(), -6, SIDE / 2, angle=270, baseline="bottom", fontSize=10,
+                                          color=INK))
+                panel = alt.layer(*layers).properties(width=SIDE, height=SIDE)
+                panels.append(panel.properties(title=title(x_label(t), size=9)) if tp == "before" else panel)
+            rows.append(alt.hconcat(*panels, spacing=6))
+    save(alt.vconcat(*rows, spacing=6), "fig0_representative_images")
 
 # ---- Figure 1: dilution-response; each well's change as % of the strongest dilution, with the fitted curve -----
 if len(fit):                                       # analyze.py fits the curve only with 4 or more probe dilutions
@@ -268,31 +276,36 @@ if len(fit):                                       # analyze.py fits the curve o
     ).properties(width=W1, height=H1)
     save(fig1, "fig1_dilution_response")
 
-# ---- Figure 2: mean fluorescence before and after, paired bars ----------------------------------------------
-groups = chosen(S.BEFORE_AFTER)
-if groups:
+# ---- Before/after charts (fig2 and any others in settings.BEFORE_AFTER): mean fluorescence, paired bars -------
+# A bar pools the wells analyze.py listed for it in before_after_wells.csv. Probe bars keep their dilution's blue;
+# the other bars are greys, lightest first.
+pooled = pd.read_csv(OUT / "before_after_wells.csv") if S.BEFORE_AFTER else None
+for fig, figure_bars in S.BEFORE_AFTER.items():
+    groups = list(figure_bars)
+    greys = [t for t in groups if t not in PROBES]
+    shade = {**dict(zip(greys, ramp([GREY, DARK_GREY], len(greys)))), **{t: COLOR[t] for t in groups if t in PROBES}}
     W2, H2 = slot(groups, 110) * len(groups), 320
     rows = []
     for i, t in enumerate(groups):
-        w = wells[wells["treatment"] == t]
+        w = pooled[(pooled["figure"] == fig) & (pooled["bar"] == t)]
         for tp, dx in (("before", -0.19), ("after", 0.19)):           # before: open bar; after: filled
             rows.append({"group": i, "timepoint": tp, "x": i + dx, "x0": i + dx - 0.16, "x1": i + dx + 0.16,
-                         "zero": 0, **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else COLOR[t],
-                         "stroke": GREY if tp == "before" else COLOR[t]})
+                         "zero": 0, **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else shade[t],
+                         "stroke": GREY if tp == "before" else shade[t]})
     pairs = pd.DataFrame(rows)
     scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
     axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
     # significance: before vs after over each pair (paired t-test), then the probe's after bar vs the negative
     # control's (Welch's t-test) above
-    t2, top = tests[tests["figure"] == "fig2"], pairs[["mean", "hi"]].max().max()
+    t2, top = tests[tests["figure"] == fig.split("_")[0]], pairs[["mean", "hi"]].max().max()
     marks = [{"x1": i - 0.19, "x2": i + 0.19, "label": p_label(r.p),
               "y": pairs.loc[pairs["group"] == i, ["mean", "hi"]].max().max() + 0.06 * top}
              for r in t2[t2["test"].str.startswith("paired")].itertuples() for i in [groups.index(r.a)]]
     marks += pair_brackets(t2[t2["test"].str.startswith("Welch")], {t: i + 0.19 for i, t in enumerate(groups)},
                            1.2 * top, 0.13 * top)
-    Y2 = linear_y(min(pairs["lo"].min(), 0), max([m["y"] for m in marks], default=top) + 0.12 * top,
+    Y2 = linear_y(min(pairs["lo"].min(), 0), max([m["y"] for m in marks] + [top]) + 0.12 * top,
                   "Normalized bead fluorescence", tick_hi=1.05 * top)
-    fig2 = alt.layer(
+    chart = alt.layer(
         alt.Chart(pairs).mark_rect(strokeWidth=1.2).encode(
             alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
             fill=alt.Fill("fill:N", scale=None), stroke=alt.Stroke("stroke:N", scale=None)),
@@ -303,7 +316,7 @@ if groups:
             baseline="top", lineBreak="\n", fontSize=8, color=INK).encode(
             x=alt.X("x:Q", scale=scale2x), y=alt.value(H2 + 20), text="t:N"),
     ).properties(width=W2, height=H2)
-    save(fig2, "fig2_before_after")
+    save(chart, fig)
 
 # ---- Figure 3: % of beads positive after treatment --------------------------------------------------------
 groups = chosen(S.POSITIVE_BEADS)
@@ -351,7 +364,7 @@ for name in SAVED:
     png = OUT / f"{name}.png"
     width = round(Image.open(png).width * 96 / 300)
     body += (f'<figure><img src="data:image/png;base64,{base64.b64encode(png.read_bytes()).decode()}" '
-             f'width="{width}" alt="{name}"><figcaption>Figure {name[3]} ({png.name})</figcaption></figure>\n')
+             f'width="{width}" alt="{name}"><figcaption>Figure {name.split("_")[0][3:]} ({png.name})</figcaption></figure>\n')
 (OUT / "figures.html").write_text(f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bead analysis figures</title>

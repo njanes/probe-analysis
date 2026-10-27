@@ -85,6 +85,13 @@ as they are.
 3. **Analysis:** in the terminal, in this (the project) folder, run `python analyze.py study2`
 4. **Figures:** then run `python make_figures.py study2`
 
-Everything is in `study2/results/analysis`, laid out as above. There is no `fig1` for this study: the
-dilution-response curve needs at least 4 probe dilutions. `stats_report.txt` lists any image that
-wasn't used and why, and `study2/settings.py` shows how each treatment in the file names is read.
+Everything is in `study2/results/analysis`, with `figures.html` and `stats_report.txt` as above. There
+are three figures:
+
+- `fig2_before_after`: the first study's fig2, with the new annexin-V and 1:3333 wells added.
+- `fig5_before_after_first_run`: the first run's MFG-E8, GFP, 1:1000 and BSA precoat.
+- `fig6_before_after_second_run`: the second run's MFG-E8 and GFP, with the first run's 1:1000 last.
+- `fig6b_before_after_second_run_without_probe`: the same without the 1:1000.
+
+Fig2 adds the new wells to the first study's results in `results/analysis`, so keep that folder as it
+is. Images marked (400HV) aren't used. `stats_report.txt` lists every image that wasn't used and why.

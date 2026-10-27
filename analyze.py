@@ -18,7 +18,8 @@ Writes to results/analysis (in the study's folder):
   treatment_summary.csv      mean, SD and 95% CI per treatment
   representative_images.csv  typical before/after image per treatment, for fig0
   dilution_fit.csv           the curve fitted to the dilution-response, for fig1 (empty if not fitted)
-  figure_tests.csv           the comparisons marked on the bar charts, fig2 and fig3
+  before_after_wells.csv     the wells in each bar of the before/after charts (fig2 and any others in settings.py)
+  figure_tests.csv           the comparisons marked on the bar charts, the before/after charts and fig3
   stats_report.txt           the printed report, including the tests
 """
 import itertools
@@ -46,6 +47,13 @@ OUT.mkdir(exist_ok=True)
 beads = pd.read_csv(RESULTS / "bead_measurements.csv")
 log = pd.read_csv(RESULTS / "segmentation_log.csv", index_col="file")
 MAX = S.MAX_IMAGES_PER_WELL
+others = []                       # well values of other studies, for the before/after charts (settings.OTHER_STUDIES)
+for folder, words in S.OTHER_STUDIES.items():
+    path = Path(folder) / "results" / "analysis" / "well_summary.csv"
+    if not path.exists():
+        sys.exit(f"{path} not found: analyse that study first (python analyze.py {folder})")
+    other = pd.read_csv(path)[["treatment", "well_name", "F_before", "F_after"]]
+    others.append(other.assign(treatment=other["treatment"] + ", " + words))
 BUFFER, NEGCTRL, PROBE = "Buffer only", "Negative control", "Probe"   # the treatment names the tests look for
 report = []
 
@@ -165,6 +173,8 @@ files.reset_index().to_csv(OUT / "file_labels.csv", index=False)
 no_beads = {f: "no beads passed the size, shape and focus checks" for f in log.index[log["beads_kept"] == 0]}
 not_used = {**no_beads, **skip, **files.loc[files["status"] != "used", "status"]}
 say("Images not used:\n" + "\n".join(f"  {f}: {why}" for f, why in sorted(not_used.items())))
+if missing := sorted(set(S.EXCLUDE) - set(log.index)):
+    say("Files listed in EXCLUDE but not found (check the names): " + "; ".join(missing))
 if saved_twice:
     say("Positions saved more than once (same field: only the latest save is used; different field: both used):\n"
         + "\n".join(sorted(saved_twice)))
@@ -323,22 +333,35 @@ else:
 pd.DataFrame(fit, columns=["bottom", "top", "D50", "hill", "r_squared", "n_wells"]).to_csv(
     OUT / "dilution_fit.csv", index=False)
 
-# ---- 7. comparisons marked on the bar charts (each needs at least 2 wells per treatment) -------------------
-#   fig2: each treatment before vs after (paired t-test on its wells), and the probe's after-treatment
-#         fluorescence vs the negative control's at the same dilution (Welch's t-test)
-#   fig3: the dilutions' % of positive beads compared pairwise (one-way ANOVA, then Tukey's test)
-groups = chosen(S.BEFORE_AFTER)
-rows = []
-for t in groups:
-    w = wells[wells["treatment"] == t]
-    if len(w) >= 2:
-        rows.append(["fig2", "paired t-test, before vs after", t, t, w["dF"].mean(),
-                     stats.ttest_rel(w["F_after"], w["F_before"]).pvalue])
-for neg, probe in pairs:
-    if neg in groups and probe in groups:
-        a, b = (wells.loc[wells["treatment"] == t, "F_after"] for t in (neg, probe))
-        rows.append(["fig2", "Welch t-test, after vs after", neg, probe, b.mean() - a.mean(),
-                     stats.ttest_ind(b, a, equal_var=False).pvalue])
+# ---- 7. before/after bar charts (settings.BEFORE_AFTER) and fig3: the comparisons marked on them -------------
+# A before/after bar pools the wells of the treatments listed for it, which can include another study's
+# (settings.OTHER_STUDIES). Each comparison needs at least 2 wells per bar or treatment:
+#   before/after: each bar before vs after (paired t-test on its wells), and the probe's after-treatment
+#                 fluorescence vs the negative control's at the same dilution (Welch's t-test)
+#   fig3:         the dilutions' % of positive beads compared pairwise (one-way ANOVA, then Tukey's test)
+pool = pd.concat([wells.astype({"treatment": str}), *others])
+pool["dF"] = pool["F_after"] - pool["F_before"]
+bars, rows = [], []
+for fig, figure_bars in S.BEFORE_AFTER.items():
+    tag = fig.split("_")[0]                                       # "fig2", as in figure_tests.csv
+    in_bar = {}
+    for bar, names in figure_bars.items():
+        if missing := sorted(set(names) - set(pool["treatment"])):
+            sys.exit(f"BEFORE_AFTER in {FOLDER / 'settings.py'}: no wells compared for {'; '.join(missing)}")
+        in_bar[bar] = w = pool[pool["treatment"].isin(names)]
+        bars.append(w.assign(figure=fig, bar=bar))
+        if len(w) >= 2:
+            rows.append([tag, "paired t-test, before vs after", bar, bar, w["dF"].mean(),
+                         stats.ttest_rel(w["F_after"], w["F_before"]).pvalue])
+    for neg in figure_bars:
+        probe = at_same_dilution(neg)
+        if neg.startswith(NEGCTRL + " 1:") and probe in figure_bars and min(len(in_bar[neg]), len(in_bar[probe])) >= 2:
+            a, b = in_bar[neg]["F_after"], in_bar[probe]["F_after"]
+            rows.append([tag, "Welch t-test, after vs after", neg, probe, b.mean() - a.mean(),
+                         stats.ttest_ind(b, a, equal_var=False).pvalue])
+if bars:
+    pd.concat(bars)[["figure", "bar", "treatment", "well_name", "F_before", "F_after", "dF"]].to_csv(
+        OUT / "before_after_wells.csv", index=False)
 groups = chosen(S.POSITIVE_BEADS)
 v = [wells.loc[wells["treatment"] == t, "pct_positive_after"].to_numpy() for t in groups]
 tukey = len(groups) >= 2 and min(map(len, v)) >= 2
@@ -349,21 +372,30 @@ if tukey:
 tests = pd.DataFrame(rows, columns=["figure", "test", "a", "b", "difference", "p"])
 tests.to_csv(OUT / "figure_tests.csv", index=False)
 say("\n=== Comparisons marked on the bar charts ===")
-say("Figure 2: each treatment before vs after (paired t-test on its wells; change in counts)")
-for t in chosen(S.BEFORE_AFTER):
-    r = tests[tests["test"].str.startswith("paired") & (tests["a"] == t)]
-    say(f"  {t:{WIDTH}s} " + (f"{r.difference.iloc[0]:+8.1f} counts, p = {fmt_p(r.p.iloc[0])}" if len(r) else
-                            "not tested: 1 well"))
-if tests["test"].str.startswith("Welch").any():
-    say("Figure 2: after treatment, the probe vs the negative control at the same dilution (Welch's t-test)")
-for r in tests[tests["test"].str.startswith("Welch")].itertuples():
-    say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
+for fig, figure_bars in S.BEFORE_AFTER.items():
+    tag, width = fig.split("_")[0], max(WIDTH, *map(len, figure_bars))
+    shown = tests[tests["figure"] == tag]
+    say(f"Figure {tag[3:]}: each treatment before vs after (paired t-test on its wells; change in counts)")
+    for bar, names in figure_bars.items():                       # what each bar holds, if not just its own name
+        if names != [bar]:
+            n = {name: int((pool["treatment"] == name).sum()) for name in names}
+            say(f"  {bar} holds " + "; ".join(f"{name} ({k} well{'s' * (k != 1)})" for name, k in n.items()))
+    for bar in figure_bars:
+        r = shown[shown["test"].str.startswith("paired") & (shown["a"] == bar)]
+        say(f"  {bar:{width}s} " + (f"{r.difference.iloc[0]:+8.1f} counts, p = {fmt_p(r.p.iloc[0])}" if len(r) else
+                                   "not tested: 1 well"))
+    welch = shown[shown["test"].str.startswith("Welch")]
+    if len(welch):
+        say(f"Figure {tag[3:]}: after treatment, the probe vs the negative control at the same dilution "
+            f"(Welch's t-test)")
+    for r in welch.itertuples():
+        say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
 if tukey:
     say(f"Figure 3: % of positive beads compared between dilutions (one-way ANOVA p = "
         f"{fmt_p(stats.f_oneway(*v).pvalue)}, then Tukey's test)")
     for r in tests[tests["figure"] == "fig3"].itertuples():
         say(f"  {r.b} vs {r.a}: {r.difference:+.1f} percentage points, p = {fmt_p(r.p)}")
-else:
+elif groups:
     say("Figure 3: no comparisons; they need at least 2 treatments, each with at least 2 wells.")
 
 # ---- 8. representative images, chosen by rule: the typical well, then its typical image -------------------

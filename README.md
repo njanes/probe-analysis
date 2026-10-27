@@ -250,31 +250,43 @@ and saturation caps the SNR of the brightest beads as well.
 
 ## Second study (study2 folder)
 
-Two further runs, analysed together in the `study2` folder with their own settings
-(`study2/settings.py`), so the first study's results above are unchanged. The images are used with the
-names they were saved under. The two runs used different words for three of the treatments; each word
-is mapped to one treatment name, and a well imaged in both runs is one well, with the second run's
-images as further images of it.
+Two further runs, analysed in the `study2` folder with their own settings (`study2/settings.py`), so the
+first study's results above are unchanged. The images are used with the names they were saved under.
+Each run's wells are its own: the second run's treatment names end in ", second run".
 
-| Wells | Treatment | Words in the file names |
-|---|---|---|
-| W1 to W3 | Negative control (MFG-E8) | `negctrlMFGE8`, `Mnegvectrl_1to1000` |
-| W4 to W6 | Negative control (GFP) | `negctrlGFP`, `Mgfponly_1to1000` |
-| W7 to W9 | Annexin-V | `annexin`, `Mposctrl_1to1000` |
-| W10 | Probe 1:1000 | `1to1000` |
-| W12 and W13 | Positive control (BSA precoat) | `posctrlBSAprecoat` |
-| W14 and W15 | Probe 1:3333 | `1to3333` |
-| W16 and W17 | Not analysed (marked `dontuse`) | `dontuse` |
+| Run | Wells | Treatment | Word in the file names |
+|---|---|---|---|
+| First | W1 to W3 | Negative control (MFG-E8) | `negctrlMFGE8` |
+| First | W4 to W6 | Negative control (GFP) | `negctrlGFP` |
+| First | W7 to W9 | Annexin-V | `annexin` |
+| First | W10 | Probe 1:1000 | `1to1000` |
+| First | W12 and W13 | Positive control (BSA precoat) | `posctrlBSAprecoat` |
+| First | W14 and W15 | Probe 1:3333 | `1to3333` |
+| First | W16 and W17 | Not analysed (marked `dontuse`) | `dontuse` |
+| Second | W1 to W3 | Negative control (MFG-E8) | `Mnegvectrl_1to1000` |
+| Second | W4 to W6 | Negative control (GFP) | `Mgfponly_1to1000` |
+| Second | W7 to W9 | Annexin-V | `Mposctrl_1to1000` |
 
-- Every image of a well is used (no limit per well), including those marked `(400HV)`. A position
-  saved twice (`_0001`) is checked as described below.
-- One image, `after_ Mgfponly_1to1000_W7_3 (400HV)`, reads as negative control (GFP) in W7, which
-  has no before images, so it isn't compared.
-- Figures 0, 2, 3 and 4 show every treatment. Figure 1 and Tests 1 to 3 need treatments this study
-  doesn't have (buffer only, a negative control at a probe dilution, and 3 or 4 probe dilutions), so
-  the report notes that they weren't run. Probe 1:1000 has a single well (W10), so it has no SD and
-  isn't tested; Tukey's test for fig3 needs at least 2 wells in every treatment shown, so fig3 has
-  no brackets.
+Three figures, each in the style of fig2 above (before and after bars, mean ± SD of the wells, paired
+t-test brackets):
+
+- **fig2_before_after:** the first study's fig2 with this study's wells added. Annexin-V holds the
+  first study's buffer-only wells (W10 to W12), the first run's W7 to W9 and the second run's W9;
+  1:3333 holds the first study's 3 well values and the first run's W14 and W15; the negative control
+  1:3333 is the first study's. The probe's after bar is again compared with the negative control's
+  (Welch's t-test).
+- **fig5_before_after_first_run:** the first run's MFG-E8, GFP, 1:1000 and BSA precoat.
+- **fig6_before_after_second_run:** the second run's MFG-E8 and GFP, with the first run's 1:1000 as
+  the last bar (the second run had no probe). **fig6b** is the same without the 1:1000, on its own scale.
+
+- The images marked `(400HV)` were taken at a different detector voltage and aren't used (`EXCLUDE`
+  in `study2/settings.py`). Every other image of a well is used; a position saved twice (`_0001`) is
+  checked as described below.
+- The second run's Annexin-V W7 and W8 have before images only, so they aren't compared.
+- 1:1000 has a single well (W10), so it has no SD and isn't tested.
+- Fig2 adds these wells to the first study's well values (`results/analysis/well_summary.csv`), so the
+  first study is analysed first. Figures 0, 1, 3 and 4 aren't made for this study, and the report
+  notes that Tests 1 to 3 weren't run: they need treatments this study doesn't have.
 
 ## Files and re-running
 
@@ -337,8 +349,11 @@ like the others.
   ("Probe 1:N") with "Buffer only", Test 2 each "Negative control 1:N" with the probe at the same
   dilution, and Test 3 runs over every probe well (at least 3 dilutions); a test runs only when the
   study has the treatments it needs. The fig1 curve needs at least 4 probe dilutions.
-- `BEFORE_AFTER`, `POSITIVE_BEADS` and `CHANGE_PER_WELL` in `settings.py` choose the treatments in
-  figs 2, 3 and 4 (`None` = all). `FIGURE_NAMES` relabels a treatment in the figures.
+- `BEFORE_AFTER` in `settings.py` lists the before/after charts (fig2 and any others): each chart's
+  bars, and the treatments whose wells each bar holds. A treatment of a study listed in
+  `OTHER_STUDIES` is named with the words given there (study2 uses "Buffer only, first study").
+  `REPRESENTATIVE_IMAGES`, `POSITIVE_BEADS` and `CHANGE_PER_WELL` choose the treatments in figs 0, 3
+  and 4 (`None` = all, `[]` = no figure). `FIGURE_NAMES` relabels a treatment in the figures.
 - To leave out an image for another reason, add it to `EXCLUDE` in `settings.py` with the reason.
 
 **Measurement settings** (1 pixel = 0.104 µm): beads kept if 3.8 to 7 µm across in transmitted
