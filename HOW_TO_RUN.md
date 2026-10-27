@@ -90,7 +90,8 @@ are three figures:
 
 - `fig2_before_after`: the first study's fig2, with the new annexin-V and 1:3333 wells added.
 - `fig5_before_after_first_run`: the first run's MFG-E8, GFP, 1:1000 and BSA precoat.
-- `fig6_before_after_second_run`: the second run's MFG-E8 and GFP, with the first run's 1:1000 last.
+- `fig6_before_after_second_run`: the second run's MFG-E8 and GFP, with 1:1000 last.
+- In both, 1:1000 includes the earlier 1:1000 wells, and every other treatment is compared with it.
 - `fig6b_before_after_second_run_without_probe`: the same without the 1:1000.
 
 Fig2 adds the new wells to the first study's results in `results/analysis`, so keep that folder as it

@@ -163,7 +163,8 @@ def p_label(p):
 
 def pair_brackets(pairwise, position, base, step):
     """One bracket per test, between the positions of its two groups: the narrowest lowest, each a step higher."""
-    t = pairwise.assign(x1=pairwise["a"].map(position), x2=pairwise["b"].map(position))
+    ends = np.sort(np.column_stack([pairwise["a"].map(position), pairwise["b"].map(position)]), axis=1)
+    t = pairwise.assign(x1=ends[:, 0], x2=ends[:, 1])                  # x1 is the left end whatever the order
     t = t.assign(span=t["x2"] - t["x1"]).sort_values(["span", "x1"])
     return [{"x1": r.x1, "x2": r.x2, "y": base + k * step, "label": p_label(r.p)} for k, r in enumerate(t.itertuples())]
 
@@ -299,13 +300,13 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
     heights = pd.concat([pairs.melt("group", ["mean", "hi"], value_name="y")[["group", "y"]], dots[["group", "y"]]])
     scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
     axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
-    # significance: before vs after over each pair (paired t-test), then the probe's after bar vs the negative
-    # control's (Welch's t-test) above
+    # significance: before vs after over each pair (paired t-test), then above, after bars compared: the probe's
+    # vs the negative control's (Welch's t-test), or each bar's vs the settings.COMPARE_TO bar's (Dunnett's test)
     t2, top = tests[tests["figure"] == fig.split("_")[0]], heights["y"].max()
     marks = [{"x1": i - 0.19, "x2": i + 0.19, "label": p_label(r.p),
               "y": heights.loc[heights["group"] == i, "y"].max() + 0.06 * top}
              for r in t2[t2["test"].str.startswith("paired")].itertuples() for i in [groups.index(r.a)]]
-    marks += pair_brackets(t2[t2["test"].str.startswith("Welch")], {t: i + 0.19 for i, t in enumerate(groups)},
+    marks += pair_brackets(t2[~t2["test"].str.startswith("paired")], {t: i + 0.19 for i, t in enumerate(groups)},
                            1.2 * top, 0.13 * top)
     Y2 = linear_y(np.nanmin([pairs["lo"].min(), dots["y"].min(), 0]),
                   max([m["y"] for m in marks] + [top]) + 0.12 * top, "Normalized bead fluorescence", tick_hi=1.05 * top)
@@ -368,9 +369,9 @@ if groups:
 body = ""
 for name in SAVED:
     png = OUT / f"{name}.png"
-    width = round(Image.open(png).width * 96 / 300)
+    width, number = round(Image.open(png).width * 96 / 300), name.split("_")[0][3:]   # "fig6b_..." -> "6b"
     body += (f'<figure><img src="data:image/png;base64,{base64.b64encode(png.read_bytes()).decode()}" '
-             f'width="{width}" alt="{name}"><figcaption>Figure {name.split("_")[0][3:]} ({png.name})</figcaption></figure>\n')
+             f'width="{width}" alt="{name}"><figcaption>Figure {number} ({png.name})</figcaption></figure>\n')
 (OUT / "figures.html").write_text(f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bead analysis figures</title>

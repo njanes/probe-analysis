@@ -336,8 +336,10 @@ pd.DataFrame(fit, columns=["bottom", "top", "D50", "hill", "r_squared", "n_wells
 # ---- 7. before/after bar charts (settings.BEFORE_AFTER) and fig3: the comparisons marked on them -------------
 # A before/after bar pools the wells of the treatments listed for it, which can include another study's
 # (settings.OTHER_STUDIES). Each comparison needs at least 2 wells per bar or treatment:
-#   before/after: each bar before vs after (paired t-test on its wells), and the probe's after-treatment
-#                 fluorescence vs the negative control's at the same dilution (Welch's t-test)
+#   before/after: each bar before vs after (paired t-test on its wells), the probe's after-treatment
+#                 fluorescence vs the negative control's at the same dilution (Welch's t-test), and, in a chart
+#                 listed in settings.COMPARE_TO, every other bar's after-treatment fluorescence vs that bar's
+#                 (Dunnett's test, which corrects for comparing several bars with one)
 #   fig3:         the dilutions' % of positive beads compared pairwise (one-way ANOVA, then Tukey's test)
 pool = pd.concat([wells.astype({"treatment": str}), *others])
 pool["dF"] = pool["F_after"] - pool["F_before"]
@@ -359,6 +361,15 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
             a, b = in_bar[neg]["F_after"], in_bar[probe]["F_after"]
             rows.append([tag, "Welch t-test, after vs after", neg, probe, b.mean() - a.mean(),
                          stats.ttest_ind(b, a, equal_var=False).pvalue])
+    if ref := S.COMPARE_TO.get(fig):                              # every other bar vs one bar, after treatment
+        if ref not in figure_bars:
+            sys.exit(f"COMPARE_TO in {FOLDER / 'settings.py'}: '{ref}' is not a bar of {fig}")
+        compared = [bar for bar in figure_bars if bar != ref and len(in_bar[bar]) >= 2]
+        if len(in_bar[ref]) >= 2 and compared:
+            test = stats.dunnett(*[in_bar[bar]["F_after"] for bar in compared], control=in_bar[ref]["F_after"],
+                                 random_state=0)
+            rows += [[tag, "Dunnett's test, after vs after", ref, bar, in_bar[bar]["F_after"].mean()
+                      - in_bar[ref]["F_after"].mean(), p] for bar, p in zip(compared, test.pvalue)]
 if bars:
     pd.concat(bars)[["figure", "bar", "treatment", "well_name", "F_before", "F_after", "dF"]].to_csv(
         OUT / "before_after_wells.csv", index=False)
@@ -390,6 +401,13 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
             f"(Welch's t-test)")
     for r in welch.itertuples():
         say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
+    if ref := S.COMPARE_TO.get(fig):
+        dunnett = shown[shown["test"].str.startswith("Dunnett")]
+        say(f"Figure {tag[3:]}: after treatment, each treatment vs {ref} (Dunnett's test, corrected for "
+            f"{len(dunnett)} comparisons)" if len(dunnett) else
+            f"Figure {tag[3:]}: no comparisons with {ref}; they need at least 2 wells in it and in another bar")
+        for r in dunnett.itertuples():
+            say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
 if tukey:
     say(f"Figure 3: % of positive beads compared between dilutions (one-way ANOVA p = "
         f"{fmt_p(stats.f_oneway(*v).pvalue)}, then Tukey's test)")

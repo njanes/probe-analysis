@@ -37,7 +37,7 @@ SATURATION = 4095                  # detector maximum (12-bit); a bead with any 
 
 # Before/after bar charts: chart name -> {bar: the treatments whose wells the bar holds}. Fig2 is the first study's
 # fig2 with this study's annexin-V and 1:3333 wells added; fig5 and fig6 show the first and second runs, and fig6b
-# is fig6 without the 1:1000.
+# is fig6 without the 1:1000. Their 1:1000 holds the first study's 1:1000 wells and the first run's W10.
 BEFORE_AFTER = {
     "fig2_before_after": {
         "Annexin-V": ["Buffer only, first study", "Annexin-V", "Annexin-V, second run"],
@@ -47,13 +47,13 @@ BEFORE_AFTER = {
     "fig5_before_after_first_run": {
         "Negative control (MFG-E8)": ["Negative control (MFG-E8)"],
         "Negative control (GFP)": ["Negative control (GFP)"],
-        "Probe 1:1000": ["Probe 1:1000"],
+        "Probe 1:1000": ["Probe 1:1000, first study", "Probe 1:1000"],
         "Positive control (BSA precoat)": ["Positive control (BSA precoat)"],
     },
-    "fig6_before_after_second_run": {   # the second run had no probe, so the first run's 1:1000 is last, to crop
+    "fig6_before_after_second_run": {   # the second run had no probe, so the 1:1000 is last, to crop
         "Negative control (MFG-E8)": ["Negative control (MFG-E8), second run"],
         "Negative control (GFP)": ["Negative control (GFP), second run"],
-        "Probe 1:1000": ["Probe 1:1000"],
+        "Probe 1:1000": ["Probe 1:1000, first study", "Probe 1:1000"],
     },
     "fig6b_before_after_second_run_without_probe": {   # fig6 without the 1:1000, on its own scale
         "Negative control (MFG-E8)": ["Negative control (MFG-E8), second run"],
@@ -62,6 +62,9 @@ BEFORE_AFTER = {
 }
 
 WELL_DOTS = True                   # a dot for each well on the before/after bars
+
+# Charts whose other bars are each compared with one bar, after treatment (Dunnett's test): chart -> that bar
+COMPARE_TO = {"fig5_before_after_first_run": "Probe 1:1000", "fig6_before_after_second_run": "Probe 1:1000"}
 
 # No other figures for this study
 REPRESENTATIVE_IMAGES = []         # fig0
