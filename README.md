@@ -287,7 +287,8 @@ t-test brackets), with a dot for each well on the bars:
 - **fig5_before_after_first_run:** the first run's MFG-E8, GFP and BSA precoat, with 1:1000.
 - **fig6_before_after_second_run:** the second run's MFG-E8 and GFP, then two 1:1000 bars (the second
   run had no probe): previous, the first study's 1:1000 wells (W1 to W3) and the first run's W10, and
-  recent, the third run's W1 to W3. **fig6b** is the same without the 1:1000s, on its own scale.
+  recent, the third run's W1 to W3. **fig6b** is the same without the 1:1000s, on its own scale, and
+  **fig6c** with the recent 1:1000 only, compared with both negative controls.
 - In fig5, 1:1000 is the same as fig6's previous 1:1000. Each other bar's after-treatment fluorescence
   is compared with 1:1000's in fig5. In fig6, every other bar is compared with the previous 1:1000
   (including the recent 1:1000), and the negative controls with the recent 1:1000 too. These use

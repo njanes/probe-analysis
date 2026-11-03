@@ -37,8 +37,9 @@ SATURATION = 4095                  # detector maximum (12-bit); a bead with any 
 
 # Before/after bar charts: chart name -> {bar: the treatments whose wells the bar holds}. Fig2 is the first study's
 # fig2 with this study's annexin-V and 1:3333 wells added; fig5 and fig6 show the first and second runs, and fig6b
-# is fig6 without the 1:1000. In fig5, 1:1000 holds the first study's 1:1000 wells and the first run's W10; fig6
-# shows those as the previous 1:1000, beside the recent one: the third run's W1 to W3 (study3).
+# is fig6 without the 1:1000s, fig6c with the recent one only. In fig5, 1:1000 holds the first study's 1:1000 wells
+# and the first run's W10; fig6 shows those as the previous 1:1000, beside the recent one: the third run's W1 to W3
+# (study3).
 BEFORE_AFTER = {
     "fig2_before_after": {
         "Annexin-V": ["Buffer only, first study", "Annexin-V", "Annexin-V, second run"],
@@ -61,6 +62,11 @@ BEFORE_AFTER = {
         "Negative control (MFG-E8)": ["Negative control (MFG-E8), second run"],
         "Negative control (GFP)": ["Negative control (GFP), second run"],
     },
+    "fig6c_before_after_second_run_recent_probe": {     # fig6 with the recent 1:1000 only
+        "Negative control (MFG-E8)": ["Negative control (MFG-E8), second run"],
+        "Negative control (GFP)": ["Negative control (GFP), second run"],
+        "Probe 1:1000 (recent)": ["Probe 1:1000, third run"],
+    },
 }
 
 WELL_DOTS = True                   # a dot for each well on the before/after bars
@@ -69,7 +75,8 @@ WELL_DOTS = True                   # a dot for each well on the before/after bar
 # list of bars (each pair compared once). In fig6, every bar vs the previous 1:1000, then the negative controls vs
 # the recent 1:1000.
 COMPARE_TO = {"fig5_before_after_first_run": "Probe 1:1000",
-              "fig6_before_after_second_run": ["Probe 1:1000 (previous)", "Probe 1:1000 (recent)"]}
+              "fig6_before_after_second_run": ["Probe 1:1000 (previous)", "Probe 1:1000 (recent)"],
+              "fig6c_before_after_second_run_recent_probe": "Probe 1:1000 (recent)"}
 
 # No other figures for this study
 REPRESENTATIVE_IMAGES = []         # fig0

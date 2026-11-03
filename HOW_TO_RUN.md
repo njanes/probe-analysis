@@ -104,6 +104,7 @@ The figures:
 - `fig6_before_after_second_run`: the second run's MFG-E8 and GFP, then the previous and the recent
   (third run) 1:1000 as two bars.
 - `fig6b_before_after_second_run_without_probe`: the same without the 1:1000s.
+- `fig6c_before_after_second_run_recent_probe`: the same with only the recent 1:1000.
 - Every other bar is compared with the 1:1000. In fig6, that's the previous one, and the negative
   controls are also compared with the recent one.
 
