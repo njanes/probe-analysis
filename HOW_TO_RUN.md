@@ -75,24 +75,30 @@ of the analysis.
 
 ## Running the second study
 
-The second study (both of its runs) is analysed in its own folder, `study2`, so the results above stay
-as they are.
+The second study is analysed in its own folders, `study2` (its first two runs) and `study3` (the third
+run, with 1:1000 in W1 to W3), so the results above stay as they are.
 
-1. In the `study2` folder, make a folder called `images` and copy in every image from both runs. Keep
-   the names they were saved under; don't rename anything. Then make an empty folder called `results`
-   in `study2` too.
-2. **Fiji macro:** run it as above, choosing `study2/images` first, then `study2/results`.
-3. **Analysis:** in the terminal, in this (the project) folder, run `python analyze.py study2`
-4. **Figures:** then run `python make_figures.py study2`
+1. In the `study2` folder, make a folder called `images` and copy in every image from the first two
+   runs. Keep the names they were saved under; don't rename anything. Then make an empty folder called
+   `results` in `study2` too.
+2. Do the same in the `study3` folder with the third run's images. Copy only the bead images (names
+   starting with `before_` or `after_`); leave out the other images in that folder, such as the
+   `Arantxa_..._diffSY5Y` ones.
+3. **Fiji macro:** run it as above twice: on `study2/images`, saving to `study2/results`, and on
+   `study3/images`, saving to `study3/results`. (If `study2/results` is already done, skip that one.)
+4. **Analysis:** in the terminal, in this (the project) folder, run `python analyze.py study3`, then
+   `python analyze.py study2`. Study3 goes first, because study2's figures use its wells.
+5. **Figures:** then run `python make_figures.py study2`
 
-Everything is in `study2/results/analysis`, with `figures.html` and `stats_report.txt` as above. There
-are three figures:
+Everything is in `study2/results/analysis`, with `figures.html` and `stats_report.txt` as above. The
+figures:
 
 - `fig2_before_after`: the first study's fig2, with the new annexin-V and 1:3333 wells added.
 - `fig5_before_after_first_run`: the first run's MFG-E8, GFP, 1:1000 and BSA precoat.
-- `fig6_before_after_second_run`: the second run's MFG-E8 and GFP, with 1:1000 last.
-- In both, 1:1000 includes the earlier 1:1000 wells, and every other treatment is compared with it.
-- `fig6b_before_after_second_run_without_probe`: the same without the 1:1000.
+- `fig6_before_after_second_run`: the second run's MFG-E8 and GFP, then the previous and the recent
+  (third run) 1:1000 as two bars.
+- `fig6b_before_after_second_run_without_probe`: the same without the 1:1000s.
+- Every other bar is compared with the 1:1000 (in fig6, the previous one).
 
 Fig2 adds the new wells to the first study's results in `results/analysis`, so keep that folder as it
 is. Images marked (400HV) aren't used. `stats_report.txt` lists every image that wasn't used and why.

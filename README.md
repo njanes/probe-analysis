@@ -266,6 +266,11 @@ Each run's wells are its own: the second run's treatment names end in ", second 
 | Second | W1 to W3 | Negative control (MFG-E8) | `Mnegvectrl_1to1000` |
 | Second | W4 to W6 | Negative control (GFP) | `Mgfponly_1to1000` |
 | Second | W7 to W9 | Annexin-V | `Mposctrl_1to1000` |
+| Third | W1 to W3 | Probe 1:1000 | `1to1000` |
+| Third | W4 | Not analysed (before images only) | `1to3333` |
+
+The third run is in its own folder, `study3` (with its own `settings.py`), because it uses the same
+words as the first run; study2's fig6 uses its wells, named "Probe 1:1000, third run".
 
 Three figures, each in the style of fig2 above (before and after bars, mean ± SD of the wells, paired
 t-test brackets), with a dot for each well on the bars:
@@ -276,18 +281,20 @@ t-test brackets), with a dot for each well on the bars:
   1:3333 is the first study's. The probe's after bar is again compared with the negative control's
   (Welch's t-test).
 - **fig5_before_after_first_run:** the first run's MFG-E8, GFP and BSA precoat, with 1:1000.
-- **fig6_before_after_second_run:** the second run's MFG-E8 and GFP, with 1:1000 as the last bar (the
-  second run had no probe). **fig6b** is the same without the 1:1000, on its own scale.
-- In fig5 and fig6, 1:1000 holds the first study's 1:1000 wells (W1 to W3) and the first run's W10,
-  and each other treatment's after-treatment fluorescence is compared with 1:1000's (Dunnett's test,
-  which corrects for comparing several treatments with one; `COMPARE_TO` in `study2/settings.py`).
+- **fig6_before_after_second_run:** the second run's MFG-E8 and GFP, then two 1:1000 bars (the second
+  run had no probe): previous, the first study's 1:1000 wells (W1 to W3) and the first run's W10, and
+  recent, the third run's W1 to W3. **fig6b** is the same without the 1:1000s, on its own scale.
+- In fig5, 1:1000 is the same as fig6's previous 1:1000. Each other bar's after-treatment fluorescence
+  is compared with 1:1000's in fig5, and with the previous 1:1000's in fig6, which compares the
+  recent 1:1000 with the previous one too (Dunnett's test, which corrects for comparing several bars
+  with one; `COMPARE_TO` in `study2/settings.py`).
 
 - The images marked `(400HV)` were taken at a different detector voltage and aren't used (`EXCLUDE`
   in `study2/settings.py`). Every other image of a well is used; a position saved twice (`_0001`) is
   checked as described below.
 - The second run's Annexin-V W7 and W8 have before images only, so they aren't compared.
-- Fig2 adds these wells to the first study's well values (`results/analysis/well_summary.csv`), so the
-  first study is analysed first. Figures 0, 1, 3 and 4 aren't made for this study, and the report
+- Fig2 adds these wells to the first study's well values (`results/analysis/well_summary.csv`) and fig6
+  uses the third run's (`study3/results/analysis/well_summary.csv`), so those are analysed first. Figures 0, 1, 3 and 4 aren't made for this study, and the report
   notes that Tests 1 to 3 weren't run: they need treatments this study doesn't have.
 
 ## Files and re-running
@@ -304,7 +311,8 @@ probe-analysis/
 ├── results/                macro output: bead_measurements.csv, segmentation_log.csv, qc/, rois/, figure_images/,
 │                           settings_used.txt
 │   └── analysis/           Python output: tables, stats_report.txt (full statistics), figures, figures.html (all on one page)
-└── study2/                 the second study: its settings.py, and its own images/ and results/ laid out as above
+├── study2/                 the second study: its settings.py, and its own images/ and results/ laid out as above
+└── study3/                 the third run, laid out the same way
 ```
 
 Requires Fiji (it includes Bio-Formats, which opens .oir files) and Python 3.10 or newer with the

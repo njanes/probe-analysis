@@ -408,6 +408,9 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
             f"Figure {tag[3:]}: no comparisons with {ref}; they need at least 2 wells in it and in another bar")
         for r in dunnett.itertuples():
             say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
+        for bar in figure_bars:
+            if len(dunnett) and bar != ref and bar not in set(dunnett["b"]):
+                say(f"  {bar} vs {ref}: not tested: 1 well")
 if tukey:
     say(f"Figure 3: % of positive beads compared between dilutions (one-way ANOVA p = "
         f"{fmt_p(stats.f_oneway(*v).pvalue)}, then Tukey's test)")

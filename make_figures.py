@@ -279,12 +279,14 @@ if len(fit):                                       # analyze.py fits the curve o
 
 # ---- Before/after charts (fig2 and any others in settings.BEFORE_AFTER): mean fluorescence, paired bars -------
 # A bar pools the wells analyze.py listed for it in before_after_wells.csv, shown as dots if settings.WELL_DOTS.
-# Probe bars keep their dilution's blue; the other bars are greys, lightest first.
+# Probe bars keep their dilution's blue (a note in brackets after the dilution is allowed); the other bars are
+# greys, lightest first.
 pooled = pd.read_csv(OUT / "before_after_wells.csv") if S.BEFORE_AFTER else None
 for fig, figure_bars in S.BEFORE_AFTER.items():
     groups = list(figure_bars)
-    greys = [t for t in groups if t not in PROBES]
-    shade = {**dict(zip(greys, ramp([GREY, DARK_GREY], len(greys)))), **{t: COLOR[t] for t in groups if t in PROBES}}
+    probe = {t: t.split(" (")[0] for t in groups if t.split(" (")[0] in PROBES}   # "Probe 1:1000 (recent)": 1:1000
+    greys = [t for t in groups if t not in probe]
+    shade = {**dict(zip(greys, ramp([GREY, DARK_GREY], len(greys)))), **{t: COLOR[d] for t, d in probe.items()}}
     W2, H2 = slot(groups, 110) * len(groups), 320
     rows, dots = [], []
     for i, t in enumerate(groups):
