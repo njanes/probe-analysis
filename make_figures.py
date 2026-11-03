@@ -305,7 +305,7 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
     scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
     axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
     # significance: before vs after over each pair (paired t-test), then above, after bars compared: the probe's
-    # vs the negative control's (Welch's t-test), or each bar's vs the settings.COMPARE_TO bar's (Dunnett's test)
+    # vs the negative control's (Welch's t-test), or each bar's vs the settings.COMPARE_TO bars' (Dunnett's test)
     t2, top = tests[tests["figure"] == fig.split("_")[0]], heights["y"].max()
     marks = [{"x1": i - 0.19, "x2": i + 0.19, "label": p_label(r.p),
               "y": heights.loc[heights["group"] == i, "y"].max() + 0.06 * top}

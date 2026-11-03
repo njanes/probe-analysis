@@ -289,9 +289,10 @@ t-test brackets), with a dot for each well on the bars:
   run had no probe): previous, the first study's 1:1000 wells (W1 to W3) and the first run's W10, and
   recent, the third run's W1 to W3. **fig6b** is the same without the 1:1000s, on its own scale.
 - In fig5, 1:1000 is the same as fig6's previous 1:1000. Each other bar's after-treatment fluorescence
-  is compared with 1:1000's in fig5, and with the previous 1:1000's in fig6, which compares the
-  recent 1:1000 with the previous one too (Dunnett's test, which corrects for comparing several bars
-  with one; `COMPARE_TO` in `study2/settings.py`).
+  is compared with 1:1000's in fig5. In fig6, every other bar is compared with the previous 1:1000
+  (including the recent 1:1000), and the negative controls with the recent 1:1000 too. These use
+  Dunnett's test, which corrects for comparing several bars with one, once for each 1:1000
+  (`COMPARE_TO` in `study2/settings.py`).
 
 - The images marked `(400HV)` were taken at a different detector voltage and aren't used (`EXCLUDE`
   in `study2/settings.py`). Every other image of a well is used; a position saved twice (`_0001`) is

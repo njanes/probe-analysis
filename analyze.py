@@ -124,6 +124,12 @@ def chosen(setting):
     return [t for t in ORDER if setting is None or t in setting or t.partition(" 1:")[0] in setting]
 
 
+def references(fig):
+    """The bars a chart's other bars are compared with (settings.COMPARE_TO: one bar, or a list of bars)."""
+    refs = S.COMPARE_TO.get(fig, [])
+    return [refs] if isinstance(refs, str) else refs
+
+
 def at_same_dilution(neg):
     """The probe at a negative control's dilution: 'Negative control 1:3333' -> 'Probe 1:3333'."""
     return PROBE + neg.removeprefix(NEGCTRL)
@@ -349,7 +355,8 @@ pd.DataFrame(fit, columns=["bottom", "top", "D50", "hill", "r_squared", "n_wells
 #   before/after: each bar before vs after (paired t-test on its wells), the probe's after-treatment
 #                 fluorescence vs the negative control's at the same dilution (Welch's t-test), and, in a chart
 #                 listed in settings.COMPARE_TO, every other bar's after-treatment fluorescence vs that bar's
-#                 (Dunnett's test, which corrects for comparing several bars with one)
+#                 (Dunnett's test, which corrects for comparing several bars with one), for each bar listed, each
+#                 pair once
 #   fig3:         the dilutions' % of positive beads compared pairwise (one-way ANOVA, then Tukey's test)
 pool = pd.concat([wells.astype({"treatment": str}), *others])
 pool["dF"] = pool["F_after"] - pool["F_before"]
@@ -375,11 +382,13 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
             a, b = in_bar[neg]["F_after"], in_bar[probe]["F_after"]
             rows.append([tag, "Welch t-test, after vs after", neg, probe, b.mean() - a.mean(),
                          stats.ttest_ind(b, a, equal_var=False).pvalue])
-    if (ref := S.COMPARE_TO.get(fig)) and ref not in in_bar:      # every other bar vs one bar, after treatment
-        warn(f"{fig}: no comparisons with '{ref}', which " + ("has no wells" if ref in figure_bars else
-                                                             "is not one of its bars (COMPARE_TO in settings.py)"))
-    elif ref:
-        compared = [bar for bar in in_bar if bar != ref and len(in_bar[bar]) >= 2]
+    for ref in references(fig):                                   # every other bar vs one bar, after treatment
+        if ref not in in_bar:
+            warn(f"{fig}: no comparisons with '{ref}', which " + ("has no wells" if ref in figure_bars else
+                                                                 "is not one of its bars (COMPARE_TO in settings.py)"))
+            continue
+        done = {frozenset(row[2:4]) for row in rows if row[0] == tag and not row[1].startswith("paired")}
+        compared = [bar for bar in in_bar if bar != ref and len(in_bar[bar]) >= 2 and {bar, ref} not in done]
         if len(in_bar[ref]) >= 2 and compared:
             test = stats.dunnett(*[in_bar[bar]["F_after"] for bar in compared], control=in_bar[ref]["F_after"],
                                  random_state=0)
@@ -416,15 +425,15 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
             f"(Welch's t-test)")
     for r in welch.itertuples():
         say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
-    if (ref := S.COMPARE_TO.get(fig)) in in_bar:
-        dunnett = shown[shown["test"].str.startswith("Dunnett")]
+    for ref in [ref for ref in references(fig) if ref in in_bar]:
+        dunnett = shown[shown["test"].str.startswith("Dunnett") & (shown["a"] == ref)]
         say(f"Figure {tag[3:]}: after treatment, each treatment vs {ref} (Dunnett's test, corrected for "
             f"{len(dunnett)} comparison{'s' * (len(dunnett) != 1)})" if len(dunnett) else
             f"Figure {tag[3:]}: no comparisons with {ref}; they need at least 2 wells in it and in another bar")
         for r in dunnett.itertuples():
             say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
         for bar in in_bar:
-            if len(dunnett) and bar != ref and bar not in set(dunnett["b"]):
+            if len(dunnett) and bar != ref and len(in_bar[bar]) < 2:
                 say(f"  {bar} vs {ref}: not tested: 1 well")
 if tukey:
     say(f"Figure 3: % of positive beads compared between dilutions (one-way ANOVA p = "

@@ -104,7 +104,8 @@ The figures:
 - `fig6_before_after_second_run`: the second run's MFG-E8 and GFP, then the previous and the recent
   (third run) 1:1000 as two bars.
 - `fig6b_before_after_second_run_without_probe`: the same without the 1:1000s.
-- Every other bar is compared with the 1:1000 (in fig6, the previous one).
+- Every other bar is compared with the 1:1000. In fig6, that's the previous one, and the negative
+  controls are also compared with the recent one.
 
 Fig2 adds the new wells to the first study's results in `results/analysis`, so keep that folder as it
 is. Images marked (400HV) aren't used. `stats_report.txt` lists every image that wasn't used and why.

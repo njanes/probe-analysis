@@ -65,8 +65,11 @@ BEFORE_AFTER = {
 
 WELL_DOTS = True                   # a dot for each well on the before/after bars
 
-# Charts whose other bars are each compared with one bar, after treatment (Dunnett's test): chart -> that bar
-COMPARE_TO = {"fig5_before_after_first_run": "Probe 1:1000", "fig6_before_after_second_run": "Probe 1:1000 (previous)"}
+# Charts whose other bars are each compared with one bar, after treatment (Dunnett's test): chart -> that bar, or a
+# list of bars (each pair compared once). In fig6, every bar vs the previous 1:1000, then the negative controls vs
+# the recent 1:1000.
+COMPARE_TO = {"fig5_before_after_first_run": "Probe 1:1000",
+              "fig6_before_after_second_run": ["Probe 1:1000 (previous)", "Probe 1:1000 (recent)"]}
 
 # No other figures for this study
 REPRESENTATIVE_IMAGES = []         # fig0
