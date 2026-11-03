@@ -88,6 +88,9 @@ run, with 1:1000 in W1 to W3), so the results above stay as they are.
    `study3/images`, saving to `study3/results`. (If `study2/results` is already done, skip that one.)
 4. **Analysis:** in the terminal, in this (the project) folder, run `python analyze.py study3`, then
    `python analyze.py study2`. Study3 goes first, because study2's figures use its wells.
+   The figures are always made. If something had to be left out (an image whose name can't be read, a
+   treatment with no usable beads), the terminal says how many warnings there were, and each one is a
+   WARNING line in `stats_report.txt`.
 5. **Figures:** then run `python make_figures.py study2`
 
 Everything is in `study2/results/analysis`, with `figures.html` and `stats_report.txt` as above. The

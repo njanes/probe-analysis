@@ -41,7 +41,7 @@ tests = pd.read_csv(OUT / "figure_tests.csv")
 ORDER = list(dict.fromkeys(wells["treatment"]))  # treatments in display order, as analyze.py sorted the wells
 # probe dilutions, most diluted first, including those of other studies the before/after charts use, so each
 # dilution has the same blue in every study
-OTHERS = [t for f in S.OTHER_STUDIES
+OTHERS = [t for f in S.OTHER_STUDIES if (Path(f) / "results" / "analysis" / "well_summary.csv").exists()
           for t in pd.read_csv(Path(f) / "results" / "analysis" / "well_summary.csv")["treatment"]]
 PROBES = sorted({t for t in ORDER + OTHERS if t.startswith("Probe 1:")}, key=lambda t: -int(t.split(":")[1]))
 
@@ -283,7 +283,9 @@ if len(fit):                                       # analyze.py fits the curve o
 # greys, lightest first.
 pooled = pd.read_csv(OUT / "before_after_wells.csv") if S.BEFORE_AFTER else None
 for fig, figure_bars in S.BEFORE_AFTER.items():
-    groups = list(figure_bars)
+    groups = [bar for bar in figure_bars if ((pooled["figure"] == fig) & (pooled["bar"] == bar)).any()]
+    if not groups:                                 # every bar without wells (analyze.py warned)
+        continue
     probe = {t: t.split(" (")[0] for t in groups if t.split(" (")[0] in PROBES}   # "Probe 1:1000 (recent)": 1:1000
     greys = [t for t in groups if t not in probe]
     shade = {**dict(zip(greys, ramp([GREY, DARK_GREY], len(greys)))), **{t: COLOR[d] for t, d in probe.items()}}

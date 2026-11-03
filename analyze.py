@@ -47,20 +47,30 @@ OUT.mkdir(exist_ok=True)
 beads = pd.read_csv(RESULTS / "bead_measurements.csv")
 log = pd.read_csv(RESULTS / "segmentation_log.csv", index_col="file")
 MAX = S.MAX_IMAGES_PER_WELL
-others = []                       # well values of other studies, for the before/after charts (settings.OTHER_STUDIES)
-for folder, words in S.OTHER_STUDIES.items():
-    path = Path(folder) / "results" / "analysis" / "well_summary.csv"
-    if not path.exists():
-        sys.exit(f"{path} not found: analyse that study first (python analyze.py {folder})")
-    other = pd.read_csv(path)[["treatment", "well_name", "F_before", "F_after"]]
-    others.append(other.assign(treatment=other["treatment"] + ", " + words))
 BUFFER, NEGCTRL, PROBE = "Buffer only", "Negative control", "Probe"   # the treatment names the tests look for
-report = []
+report, warnings = [], []
 
 
 def say(msg=""):
     print(msg)
     report.append(msg)
+
+
+def warn(msg):
+    """Something left out rather than stopping the run: reported, and counted at the end."""
+    warnings.append(msg)
+    say(f"WARNING: {msg}")
+
+
+others = []                       # well values of other studies, for the before/after charts (settings.OTHER_STUDIES)
+for folder, words in S.OTHER_STUDIES.items():
+    path = Path(folder) / "results" / "analysis" / "well_summary.csv"
+    if not path.exists():
+        warn(f"{path} not found, so the charts leave out {folder}'s wells: analyse it first (python analyze.py "
+             f"{folder}), then this study again")
+        continue
+    other = pd.read_csv(path)[["treatment", "well_name", "F_before", "F_after"]]
+    others.append(other.assign(treatment=other["treatment"] + ", " + words))
 
 
 def fmt_p(p):
@@ -127,24 +137,21 @@ NAME = re.compile(r"(before|after)_(.+?)_w(\d+)_(\d+)([a-z]?)(?:_(\d{4}))?(?:\((
 skip = {f: "background image, not a bead field" for f in log.index if tidy(f).endswith("background")}
 skip.update(S.EXCLUDE)
 beads = beads[~beads["file"].isin(skip)]
-rows, problems = [], []
+rows, unread = [], {}             # unread: names that can't be read, left out and listed with the reason
 for f in beads["file"].unique():
     m = NAME.fullmatch(tidy(f))
     if not m:
-        problems.append(f"  {f}: not read as before/after_treatment_W(well)_(position); rename it, or add it "
-                        f"to EXCLUDE in {FOLDER / 'settings.py'}")
+        unread[f] = "name not read as before/after_treatment_W(well)_(position)"
         continue
     timepoint, label, well, position, letter, save, note = m.groups()
     try:
         names = treatments(label)
     except KeyError:
-        problems.append(f"  {f}: treatment '{label}' is not in GROUPS in {FOLDER / 'settings.py'}")
+        unread[f] = f"treatment '{label}' is not in GROUPS in {FOLDER / 'settings.py'}"
         continue
     rows.append({"file": f, "timepoint": timepoint, "label": label, "treatment": "; ".join(names or []),
                  "well": int(well), "position": int(position), "field": letter + (f"({note})" if note else ""),
                  "save": save or "", "status": "used" if names else f"'{label}' is set to None in GROUPS"})
-if problems:
-    sys.exit("File names that can't be read:\n" + "\n".join(problems))
 files = pd.DataFrame(rows).set_index("file")
 files["n_beads"] = beads.groupby("file").size()
 
@@ -171,8 +178,11 @@ if MAX:
     files.loc[ranked.index[over], "status"] = f"more than {MAX} images in the well; fewest beads"
 files.reset_index().to_csv(OUT / "file_labels.csv", index=False)
 no_beads = {f: "no beads passed the size, shape and focus checks" for f in log.index[log["beads_kept"] == 0]}
-not_used = {**no_beads, **skip, **files.loc[files["status"] != "used", "status"]}
+not_used = {**no_beads, **skip, **unread, **files.loc[files["status"] != "used", "status"]}
 say("Images not used:\n" + "\n".join(f"  {f}: {why}" for f, why in sorted(not_used.items())))
+if unread:
+    warn(f"{len(unread)} file name(s) couldn't be read, so those images are left out (listed above; rename them, "
+         f"or add the treatment word to GROUPS in {FOLDER / 'settings.py'})")
 if missing := sorted(set(S.EXCLUDE) - set(log.index)):
     say("Files listed in EXCLUDE but not found (check the names): " + "; ".join(missing))
 if saved_twice:
@@ -343,36 +353,41 @@ pd.DataFrame(fit, columns=["bottom", "top", "D50", "hill", "r_squared", "n_wells
 #   fig3:         the dilutions' % of positive beads compared pairwise (one-way ANOVA, then Tukey's test)
 pool = pd.concat([wells.astype({"treatment": str}), *others])
 pool["dF"] = pool["F_after"] - pool["F_before"]
-bars, rows = [], []
+bars, rows, held = [], [], {}     # held: chart -> {bar: its wells}, bars without wells left out
 for fig, figure_bars in S.BEFORE_AFTER.items():
     tag = fig.split("_")[0]                                       # "fig2", as in figure_tests.csv
-    in_bar = {}
+    in_bar = held[fig] = {}
     for bar, names in figure_bars.items():
-        if missing := sorted(set(names) - set(pool["treatment"])):
-            sys.exit(f"BEFORE_AFTER in {FOLDER / 'settings.py'}: no wells compared for {'; '.join(missing)}")
+        missing = [name for name in names if name not in set(pool["treatment"])]
+        if missing == names:
+            warn(f"{fig}: the '{bar}' bar is left out: no wells compared for {'; '.join(names)}")
+            continue
+        if missing:
+            warn(f"{fig}: the '{bar}' bar has no wells from {'; '.join(missing)}")
         in_bar[bar] = w = pool[pool["treatment"].isin(names)]
         bars.append(w.assign(figure=fig, bar=bar))
         if len(w) >= 2:
             rows.append([tag, "paired t-test, before vs after", bar, bar, w["dF"].mean(),
                          stats.ttest_rel(w["F_after"], w["F_before"]).pvalue])
-    for neg in figure_bars:
+    for neg in in_bar:
         probe = at_same_dilution(neg)
-        if neg.startswith(NEGCTRL + " 1:") and probe in figure_bars and min(len(in_bar[neg]), len(in_bar[probe])) >= 2:
+        if neg.startswith(NEGCTRL + " 1:") and probe in in_bar and min(len(in_bar[neg]), len(in_bar[probe])) >= 2:
             a, b = in_bar[neg]["F_after"], in_bar[probe]["F_after"]
             rows.append([tag, "Welch t-test, after vs after", neg, probe, b.mean() - a.mean(),
                          stats.ttest_ind(b, a, equal_var=False).pvalue])
-    if ref := S.COMPARE_TO.get(fig):                              # every other bar vs one bar, after treatment
-        if ref not in figure_bars:
-            sys.exit(f"COMPARE_TO in {FOLDER / 'settings.py'}: '{ref}' is not a bar of {fig}")
-        compared = [bar for bar in figure_bars if bar != ref and len(in_bar[bar]) >= 2]
+    if (ref := S.COMPARE_TO.get(fig)) and ref not in in_bar:      # every other bar vs one bar, after treatment
+        warn(f"{fig}: no comparisons with '{ref}', which " + ("has no wells" if ref in figure_bars else
+                                                             "is not one of its bars (COMPARE_TO in settings.py)"))
+    elif ref:
+        compared = [bar for bar in in_bar if bar != ref and len(in_bar[bar]) >= 2]
         if len(in_bar[ref]) >= 2 and compared:
             test = stats.dunnett(*[in_bar[bar]["F_after"] for bar in compared], control=in_bar[ref]["F_after"],
                                  random_state=0)
             rows += [[tag, "Dunnett's test, after vs after", ref, bar, in_bar[bar]["F_after"].mean()
                       - in_bar[ref]["F_after"].mean(), p] for bar, p in zip(compared, test.pvalue)]
-if bars:
-    pd.concat(bars)[["figure", "bar", "treatment", "well_name", "F_before", "F_after", "dF"]].to_csv(
-        OUT / "before_after_wells.csv", index=False)
+columns = ["figure", "bar", "treatment", "well_name", "F_before", "F_after", "dF"]
+(pd.concat(bars)[columns] if bars else pd.DataFrame(columns=columns)).to_csv(OUT / "before_after_wells.csv",
+                                                                             index=False)
 groups = chosen(S.POSITIVE_BEADS)
 v = [wells.loc[wells["treatment"] == t, "pct_positive_after"].to_numpy() for t in groups]
 tukey = len(groups) >= 2 and min(map(len, v)) >= 2
@@ -384,31 +399,31 @@ tests = pd.DataFrame(rows, columns=["figure", "test", "a", "b", "difference", "p
 tests.to_csv(OUT / "figure_tests.csv", index=False)
 say("\n=== Comparisons marked on the bar charts ===")
 for fig, figure_bars in S.BEFORE_AFTER.items():
-    tag, width = fig.split("_")[0], max(WIDTH, *map(len, figure_bars))
+    tag, width, in_bar = fig.split("_")[0], max([WIDTH, *map(len, figure_bars)]), held[fig]
     shown = tests[tests["figure"] == tag]
     say(f"Figure {tag[3:]}: each treatment before vs after (paired t-test on its wells; change in counts)")
     for bar, names in figure_bars.items():                       # what each bar holds, if not just its own name
-        if names != [bar]:
+        if names != [bar] and bar in in_bar:
             n = {name: int((pool["treatment"] == name).sum()) for name in names}
             say(f"  {bar} holds " + "; ".join(f"{name} ({k} well{'s' * (k != 1)})" for name, k in n.items()))
     for bar in figure_bars:
         r = shown[shown["test"].str.startswith("paired") & (shown["a"] == bar)]
         say(f"  {bar:{width}s} " + (f"{r.difference.iloc[0]:+8.1f} counts, p = {fmt_p(r.p.iloc[0])}" if len(r) else
-                                   "not tested: 1 well"))
+                                   "not tested: 1 well" if bar in in_bar else "left out: no wells"))
     welch = shown[shown["test"].str.startswith("Welch")]
     if len(welch):
         say(f"Figure {tag[3:]}: after treatment, the probe vs the negative control at the same dilution "
             f"(Welch's t-test)")
     for r in welch.itertuples():
         say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
-    if ref := S.COMPARE_TO.get(fig):
+    if (ref := S.COMPARE_TO.get(fig)) in in_bar:
         dunnett = shown[shown["test"].str.startswith("Dunnett")]
         say(f"Figure {tag[3:]}: after treatment, each treatment vs {ref} (Dunnett's test, corrected for "
-            f"{len(dunnett)} comparisons)" if len(dunnett) else
+            f"{len(dunnett)} comparison{'s' * (len(dunnett) != 1)})" if len(dunnett) else
             f"Figure {tag[3:]}: no comparisons with {ref}; they need at least 2 wells in it and in another bar")
         for r in dunnett.itertuples():
             say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
-        for bar in figure_bars:
+        for bar in in_bar:
             if len(dunnett) and bar != ref and bar not in set(dunnett["b"]):
                 say(f"  {bar} vs {ref}: not tested: 1 well")
 if tukey:
@@ -435,4 +450,6 @@ pd.DataFrame(reps).to_csv(OUT / "representative_images.csv", index=False)
 say(f"\nSoftware: Python {platform.python_version()}, numpy {np.__version__}, "
     f"pandas {pd.__version__}, scipy {scipy.__version__}")
 (OUT / "stats_report.txt").write_text("\n".join(report), encoding="utf-8")
+if warnings:
+    print(f"\n{len(warnings)} warning(s): see the WARNING lines above (also in stats_report.txt)")
 print(f"\nAnalysis done. Results in {OUT}")

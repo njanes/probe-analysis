@@ -330,8 +330,10 @@ changes them.
 **Adding images.** The analysis reads everything it needs from the file names, so new images that
 follow the naming convention are added to the tables, tests and figures automatically: copy them
 into the study's `images` folder and re-run both steps on the whole folder. Nothing in the code needs
-changing; a treatment word not seen before is added to `GROUPS` in the study's `settings.py` (the
-analysis stops and names any file it can't read). The text and tables of this README are written by
+changing; a treatment word not seen before is added to `GROUPS` in the study's `settings.py`. Nothing
+stops the run except a missing `settings.py` or macro output: an image whose name can't be read, a
+treatment with no wells, or another study not yet analysed is left out of the tables and figures, with
+a WARNING line in the report saying what and why. The text and tables of this README are written by
 hand, so update them from `results/analysis/stats_report.txt`.
 
 File names read as `{before or after}_{treatment}_W{well}_{position}.oir`, for example
