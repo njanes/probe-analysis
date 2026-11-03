@@ -28,6 +28,10 @@ EXCLUDE = {name + ".oir": "cell image, not beads" for name in [
 
 MAX_IMAGES_PER_WELL = None         # no limit: every image of a well is used
 
+# A well with usable after images but no usable before images: True = it gets the mean before values of
+# its treatment's other wells and is compared like them (the report lists it), False = it is left out
+BORROW_BEFORE = True  # W1: no usable before images
+
 SATURATION = 4095                  # detector maximum (12-bit); a bead with any pixel at it is saturated
 
 # Before/after bar chart, in the style of the other studies' (the dilution-response curve, fig1, needs 4 dilutions)

@@ -204,10 +204,12 @@ used["treatments"] = used["treatment"]
 used["treatment"] = used["treatment"].str.split("; ")
 used = used.explode("treatment")
 both = used.groupby(["well_name", "treatment"])["timepoint"].transform("nunique") == 2
-one_tp = (used.loc[~both, "well_name"] + " " + used.loc[~both, "treatment"]).unique()
+borrow = ~both & (used["timepoint"] == "after") & bool(S.BORROW_BEFORE)   # after images only: borrowed baseline
+one_tp = (used.loc[~both & ~borrow, "well_name"] + " " + used.loc[~both & ~borrow, "treatment"]).unique()
 say("Wells not compared, with images at one timepoint only: " + ("; ".join(sorted(one_tp)) or "none"))
-used = used[both]
-n_wells = used[used["timepoint"] == "before"].groupby(["well", "treatments"]).ngroups   # a shared before image = 1 well
+borrowed = (used.loc[borrow, "well_name"] + " " + used.loc[borrow, "treatment"]).unique()
+used = used[both | borrow]
+n_wells = used[used["timepoint"] == "before"].groupby(["well", "treatments"]).ngroups + len(borrowed)   # shared = 1
 ORDER = sorted(used["treatment"].unique(), key=display_order)
 n_img = used.groupby(["well_name", "treatment", "timepoint"]).size()
 if MAX:
@@ -245,6 +247,19 @@ per_tp["n_images"] = img.groupby(keys).size()
 wells = per_tp.unstack("timepoint")
 wells.columns = [f"{m}_{tp}" for m, tp in wells.columns]
 wells = wells.reset_index()
+# a well with after images only (settings.BORROW_BEFORE) gets the mean before values of its treatment's other wells
+if S.BORROW_BEFORE:
+    wells["before_borrowed"] = wells["F_before"].isna()
+    measures = ["F_before", "SNR_before", "bg_before", "pct_saturated_before", "pct_positive_before"]
+    wells[measures] = wells[measures].fillna(wells.groupby("treatment")[measures].transform("mean"))
+    wells[["n_beads_before", "n_images_before"]] = wells[["n_beads_before", "n_images_before"]].fillna(0)
+    if len(alone := wells[wells["F_before"].isna()]):
+        warn("No other wells to borrow before values from, so these wells are left out: "
+             + "; ".join(alone["well_name"] + " " + alone["treatment"]))
+        wells, n_wells = wells.drop(alone.index), n_wells - len(alone)
+    say("Wells with after images only, given the mean before values of their treatment's other wells "
+        "(BORROW_BEFORE): " + ("; ".join(w + " " + t for w, t in wells.loc[wells["before_borrowed"],
+                                                                         ["well_name", "treatment"]].values) or "none"))
 wells["dF"] = wells["F_after"] - wells["F_before"]
 wells["treatment"] = pd.Categorical(wells["treatment"], ORDER, ordered=True)
 wells = wells.sort_values(["treatment", "well"]).reset_index(drop=True)
@@ -445,8 +460,9 @@ elif groups:
 
 # ---- 8. representative images, chosen by rule: the typical well, then its typical image -------------------
 reps = []
+own = ~wells["before_borrowed"] if "before_borrowed" in wells else wells["treatment"].notna()   # wells with own before
 for t in ORDER:
-    w = wells[wells["treatment"] == t]
+    w = wells[(wells["treatment"] == t) & own]
     i = (w["dF"] - w["dF"].median()).abs().idxmin()          # well whose change is closest to the median
     for tp in ("before", "after"):
         cand = img[(img["treatment"] == t) & (img["well_name"] == w.at[i, "well_name"]) & (img["timepoint"] == tp)]

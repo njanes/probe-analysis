@@ -274,10 +274,13 @@ words as the first run; study2's fig6 uses its wells, named "Probe 1:1000, third
 (`Arantxa_..._diffSY5Y`) are left out (`EXCLUDE`). It also makes its own figures from its images, in
 `study3/results/analysis`: fig0 (representative images), **fig7_before_after_third_run** (its 1:1000
 before and after, in the style of fig2), fig3 (% positive beads) and fig4 (change per well). There is
-no fig1: the curve needs at least 4 dilutions.
+no fig1: the curve needs at least 4 dilutions. W1 had no usable before images (no bead passed the
+checks), so it takes the mean before values of W2 and W3 and is compared like them (`BORROW_BEFORE` in
+`study3/settings.py`; the report lists it).
 
 Three figures, each in the style of fig2 above (before and after bars, mean ± SD of the wells, paired
-t-test brackets), with a dot for each well on the bars:
+t-test brackets), with a dot for each well on the bars. In all before/after charts an error bar stops
+at 0:
 
 - **fig2_before_after:** the first study's fig2 with this study's wells added. Annexin-V holds the
   first study's buffer-only wells (W10 to W12), the first run's W7 to W9 and the second run's W9;
@@ -364,7 +367,9 @@ like the others.
   beads of the later save lie within 2 µm of beads of the earlier one, it is the same field retaken
   and only the latest save is used; otherwise each save is used as a field of its own. The report
   lists each decision.
-- A well is compared once it has images at both timepoints. Test 1 compares every probe dilution
+- A well is compared once it has images at both timepoints. With `BORROW_BEFORE` in the study's
+  settings, a well with after images only is compared too, using the mean before values of its
+  treatment's other wells. Test 1 compares every probe dilution
   ("Probe 1:N") with "Buffer only", Test 2 each "Negative control 1:N" with the probe at the same
   dilution, and Test 3 runs over every probe well (at least 3 dilutions); a test runs only when the
   study has the treatments it needs. The fig1 curve needs at least 4 probe dilutions.

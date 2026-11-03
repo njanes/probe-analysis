@@ -300,6 +300,7 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
             # a dot per well, side by side across the bar (a well keeps its place in the before and after bars)
             dots += [{"group": i, "x": i + dx + off, "y": y} for off, y in zip(spread(len(w), 0.11), w[f"F_{tp}"])]
     pairs = pd.DataFrame(rows)
+    pairs["lo"] = pairs["lo"].clip(lower=0)                    # an error bar stops at 0 (fluorescence above background)
     dots = pd.DataFrame(dots, columns=["group", "x", "y"]).iloc[:None if S.WELL_DOTS else 0]   # none if not shown
     heights = pd.concat([pairs.melt("group", ["mean", "hi"], value_name="y")[["group", "y"]], dots[["group", "y"]]])
     scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)

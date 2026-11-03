@@ -22,6 +22,10 @@ EXCLUDE = {}
 # in transmitted light, so the choice never depends on fluorescence). None = every image.
 MAX_IMAGES_PER_WELL = 3
 
+# A well with usable after images but no usable before images: True = it gets the mean before values of
+# its treatment's other wells and is compared like them (the report lists it), False = it is left out
+BORROW_BEFORE = False
+
 SATURATION = 4095                  # detector maximum (12-bit); a bead with any pixel at it is saturated
 
 # Before/after bar charts: chart name -> {bar: the treatments whose wells the bar holds}
