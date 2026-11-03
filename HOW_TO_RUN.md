@@ -81,9 +81,8 @@ run, with 1:1000 in W1 to W3), so the results above stay as they are.
 1. In the `study2` folder, make a folder called `images` and copy in every image from the first two
    runs. Keep the names they were saved under; don't rename anything. Then make an empty folder called
    `results` in `study2` too.
-2. Do the same in the `study3` folder with the third run's images. Copy only the bead images (names
-   starting with `before_` or `after_`); leave out the other images in that folder, such as the
-   `Arantxa_..._diffSY5Y` ones.
+2. Do the same in the `study3` folder with the third run's images. (The `Arantxa_..._diffSY5Y` cell
+   images in that folder are left out automatically.)
 3. **Fiji macro:** run it as above twice: on `study2/images`, saving to `study2/results`, and on
    `study3/images`, saving to `study3/results`. (If `study2/results` is already done, skip that one.)
 4. **Analysis:** in the terminal, in this (the project) folder, run `python analyze.py study3`, then
@@ -91,10 +90,14 @@ run, with 1:1000 in W1 to W3), so the results above stay as they are.
    The figures are always made. If something had to be left out (an image whose name can't be read, a
    treatment with no usable beads), the terminal says how many warnings there were, and each one is a
    WARNING line in `stats_report.txt`.
-5. **Figures:** then run `python make_figures.py study2`
+5. **Figures:** then run `python make_figures.py study3` and `python make_figures.py study2`
 
-Everything is in `study2/results/analysis`, with `figures.html` and `stats_report.txt` as above. The
-figures:
+Study3's own figures are in `study3/results/analysis`: `fig0_representative_images`,
+`fig7_before_after_third_run` (its 1:1000 before and after), `fig3_positive_beads` and
+`fig4_change_per_well`.
+
+Everything else is in `study2/results/analysis`, with `figures.html` and `stats_report.txt` as above.
+The figures:
 
 - `fig2_before_after`: the first study's fig2, with the new annexin-V and 1:3333 wells added.
 - `fig5_before_after_first_run`: the first run's MFG-E8, GFP, 1:1000 and BSA precoat.

@@ -270,7 +270,11 @@ Each run's wells are its own: the second run's treatment names end in ", second 
 | Third | W4 | Not analysed (before images only) | `1to3333` |
 
 The third run is in its own folder, `study3` (with its own `settings.py`), because it uses the same
-words as the first run; study2's fig6 uses its wells, named "Probe 1:1000, third run".
+words as the first run; study2's fig6 uses its wells, named "Probe 1:1000, third run". Its cell images
+(`Arantxa_..._diffSY5Y`) are left out (`EXCLUDE`). It also makes its own figures from its images, in
+`study3/results/analysis`: fig0 (representative images), **fig7_before_after_third_run** (its 1:1000
+before and after, in the style of fig2), fig3 (% positive beads) and fig4 (change per well). There is
+no fig1: the curve needs at least 4 dilutions.
 
 Three figures, each in the style of fig2 above (before and after bars, mean ± SD of the wells, paired
 t-test brackets), with a dot for each well on the bars:
@@ -294,8 +298,9 @@ t-test brackets), with a dot for each well on the bars:
   checked as described below.
 - The second run's Annexin-V W7 and W8 have before images only, so they aren't compared.
 - Fig2 adds these wells to the first study's well values (`results/analysis/well_summary.csv`) and fig6
-  uses the third run's (`study3/results/analysis/well_summary.csv`), so those are analysed first. Figures 0, 1, 3 and 4 aren't made for this study, and the report
-  notes that Tests 1 to 3 weren't run: they need treatments this study doesn't have.
+  uses the third run's (`study3/results/analysis/well_summary.csv`), so those are analysed first.
+  Figures 0, 1, 3 and 4 aren't made for study2, and the report notes that Tests 1 to 3 weren't run:
+  they need treatments this study doesn't have.
 
 ## Files and re-running
 

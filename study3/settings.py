@@ -1,7 +1,7 @@
-"""settings.py for study3: the third run, used by analyze.py when run as  python analyze.py study3. Same form as the
-project folder's settings.py. Its images go into study3/images with the names they were saved under (bead images
-only: names starting with before_ or after_). It makes no figures of its own: study2's fig6 uses its 1:1000 wells,
-so it is analysed before study2.
+"""settings.py for study3: the third run, used by analyze.py and make_figures.py when run as
+python analyze.py study3  and  python make_figures.py study3. Same form as the project folder's settings.py.
+Its images go into study3/images with the names they were saved under. It makes its own figures, and study2's fig6
+uses its 1:1000 wells, so it is analysed before study2.
 
 It has its own folder because it uses the same words as study2's first run ("1to1000", "1to3333"), so in one
 folder their wells would mix.
@@ -16,20 +16,30 @@ GROUPS = {
 # Treatment names shown differently in the figures
 FIGURE_NAMES = {}
 
-# Images that should not be analysed, and why ({"file name": "reason"})
-EXCLUDE = {}
+# Images that should not be analysed, and why ({"file name": "reason"}): cell images saved in the same folder
+EXCLUDE = {name + ".oir": "cell image, not beads" for name in [
+    "Arantxa_60x_10.29_diffSY5Y_P", "Arantxa_60x_10.29_diffSY5Y_P_0001", "Arantxa_60x_10.29_diffSY5Y_P_0002",
+    "Arantxa_60x_10.29_diffSY5Y_StpP", "Arantxa_60x_10.29_diffSY5Y_StpP_0001", "Arantxa_60x_10.29_diffSY5Y_StpP_0002",
+    "Arantxa_60x_10.29_diffSY5Y_StpPDD", "Arantxa_60x_10.29_diffSY5Y_StpPDD_0001",
+    "Arantxa_60x_10.29_diffSY5Y_StpPDD_0002", "Arantxa_60x_10.29_diffSY5Y_StpPTD",
+    "Arantxa_60x_10.29_diffSY5Y_StpPTD_0001", "Arantxa_60x_10.29_diffSY5Y_StpPTD_0002",
+    "Arantxa_60x_10.29_diffSY5Y_StpPTD_0003",
+]}
 
 MAX_IMAGES_PER_WELL = None         # no limit: every image of a well is used
 
 SATURATION = 4095                  # detector maximum (12-bit); a bead with any pixel at it is saturated
 
-# No figures for this study
-BEFORE_AFTER = {}
-WELL_DOTS = True
+# Before/after bar chart, in the style of the other studies' (the dilution-response curve, fig1, needs 4 dilutions)
+BEFORE_AFTER = {"fig7_before_after_third_run": {"Probe 1:1000": ["Probe 1:1000"]}}
+WELL_DOTS = True                   # a dot for each well on the before/after bars
 COMPARE_TO = {}
-REPRESENTATIVE_IMAGES = []         # fig0
-POSITIVE_BEADS = []                # fig3
-CHANGE_PER_WELL = []               # fig4
 
-# Other studies whose wells the before/after charts can use
-OTHER_STUDIES = {}
+# Treatments in the other figures (None = every treatment)
+REPRESENTATIVE_IMAGES = None       # fig0
+POSITIVE_BEADS = None              # fig3
+CHANGE_PER_WELL = None             # fig4
+
+# Other studies whose wells the before/after charts can use. The first study ("." is the project folder) is listed
+# for its probe dilutions only, so 1:1000 is drawn in the same blue as in the other studies' figures.
+OTHER_STUDIES = {".": "first study"}
