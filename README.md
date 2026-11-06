@@ -327,9 +327,11 @@ packages in `requirements.txt`.
 1. Run `bead_segmentation.ijm` in Fiji on the experiment's folder (such as `exp1`), saving to its
    `results`. The settings window opens with the values in the folder's `segmentation_settings.txt`
    (recorded in `results/settings_used.txt`).
-   - Optional: to correct an image's outlines by hand, run `edit_beads.ijm`, then step 1 again into an
-     empty `results`. Corrected outlines are saved in the experiment's `manual_beads/` and measured as
-     drawn, with no size, shape or focus checks (`HOW_TO_RUN.md` has the steps).
+   - Optional: to correct an image's outlines by hand, run `edit_beads.ijm`, then step 1 again into the
+     same `results` and choose Update. Corrected outlines are saved in the experiment's `manual_beads/`
+     and measured as drawn, with no size, shape or focus checks. An update measures again only the
+     images whose corrected outlines were saved (or deleted) after their QC image, with the settings in
+     `settings_used.txt`, and replaces their rows in the two .csv files (`HOW_TO_RUN.md` has the steps).
 2. From the project folder: `python3 exp1/analyze.py`, then `python3 exp1/make_figures.py`.
 
 Images and results folders are left out of git (`.gitignore`), so pulling an update never changes them.

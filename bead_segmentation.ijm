@@ -9,6 +9,9 @@
 //   the settings open with the values tuned in it.
 //   Tip: set "Process only the first N files" to 2 or 3, check the QC images,
 //   adjust, then run everything with 0.
+//   After correcting outlines with edit_beads.ijm, run it again choosing the same results
+//   folder: it offers to update them, measuring again only the images whose corrected
+//   outlines changed (or were deleted) since, with that run's settings.
 //
 // WHAT IT DOES, for each image file in the folder
 //   1. Opens it with Bio-Formats (.oir, .czi, .lif, .nd2) or natively (.tif).
@@ -47,23 +50,36 @@
 // ---- settings: two folder pickers, then one dialog ------------------------
 inputDir = stripSlash(getDirectory("Choose the folder with your images"));
 outputDir = stripSlash(getDirectory("Choose an EMPTY folder for the results"));
+sep = File.separator;
 
-// settings tuned for this experiment, if its folder has them (names as in settings_used.txt, plus figMin
-// and figMax for the figure display range)
-tunedFile = inputDir + File.separator + "segmentation_settings.txt";
-List.clear();
-if (File.exists(tunedFile)) List.setList(File.openAsString(tunedFile));
+// A results folder that already has results is updated instead: only the images whose corrected outlines
+// (manual_beads, from edit_beads.ijm) changed since are measured again, with the settings of that run.
+usedFile = outputDir + sep + "settings_used.txt";
+update = File.exists(usedFile);
+if (update && !getBoolean("This results folder already has results.\n \n"
+		+ "Update: measure again only the images whose outlines you corrected (with edit_beads.ijm) since,\n"
+		+ "with the same settings, and update the results. The other images' results stay as they are.\n \n"
+		+ "Stop: to choose an empty folder instead.", "Update", "Stop"))
+	exit;
+
+// settings tuned for this experiment, if its folder has them (names as in settings_used.txt). An update
+// takes the settings recorded for that run over these, and doesn't show the dialog.
+tunedFile = inputDir + sep + "segmentation_settings.txt";
+known = "";
+if (File.exists(tunedFile)) known = File.openAsString(tunedFile);
+if (update) known = known + "\n" + File.openAsString(usedFile);
+List.setList(known);
 
 Dialog.create("Bead segmentation settings");
 if (File.exists(tunedFile)) Dialog.addMessage("Settings tuned for this folder (segmentation_settings.txt)");
-Dialog.addString("File extension", ".oir");
-Dialog.addString("Skip files whose name contains (blank = none)", "Background", 20);
+Dialog.addString("File extension", tunedText("fileExt", ".oir"));
+Dialog.addString("Skip files whose name contains (blank = none)", tunedText("skipText", "Background"), 20);
 Dialog.addNumber("Process only the first N files (0 = all)", 0);
-Dialog.addNumber("Channel to find beads in (transmitted light)", 2);
-Dialog.addNumber("Probe fluorescence channel", 1);
-Dialog.addNumber("Frame to find beads in (1 = first)", 1);
-Dialog.addNumber("Z slice if z-stack (0 = max projection)", 0);
-Dialog.addNumber("Pixel size in microns (0 = read from file)", 0);
+Dialog.addNumber("Channel to find beads in (transmitted light)", tuned("segChannel", 2));
+Dialog.addNumber("Probe fluorescence channel", tuned("probeChannel", 1));
+Dialog.addNumber("Frame to find beads in (1 = first)", tuned("segFrame", 1));
+Dialog.addNumber("Z slice if z-stack (0 = max projection)", tuned("zSlice", 0));
+Dialog.addNumber("Pixel size in microns (0 = read from file)", tuned("pixelSizeOverride", 0));
 Dialog.addMessage("Size range of bead outlines in the transmitted-light image (incl. halo).\nYour beads measure 4.1-6.3 um this way; debris is under 3.2 um.");
 Dialog.addNumber("Keep objects at least this wide (microns)", tuned("minDiam", 3.8));
 Dialog.addNumber("Keep objects at most this wide (microns)", tuned("maxDiam", 7.0));
@@ -73,21 +89,21 @@ Dialog.addNumber("Maximum centre contrast (bright or dark centre = above or belo
 Dialog.addNumber("Maximum bright spot in the centre (catches blurred beads the above misses)", tuned("maxBrightSpot", 0.35));
 Dialog.addNumber("Minimum edge sharpness (soft edges = smeared blur)", tuned("minEdgeSharpness", 0.09));
 Dialog.addNumber("Shrink outlines before measuring (pixels)", tuned("shrinkPx", 5));
-Dialog.addChoice("Threshold method", newArray("Otsu", "Triangle", "Li", "Huang", "Default"), "Otsu");
+Dialog.addChoice("Threshold method", newArray("Otsu", "Triangle", "Li", "Huang", "Default"), tunedText("thresholdMethod", "Otsu"));
 Dialog.addNumber("Lowest allowed threshold (stops noise being outlined when few beads)", tuned("minThreshold", 80));
-Dialog.addNumber("Edge ring width (pixels)", 5);
-Dialog.addNumber("Gap between objects and background (pixels)", 4);
-Dialog.addNumber("Background ring width (pixels)", 10);
-Dialog.addNumber("Minimum background pixels per bead", 50);
-Dialog.addNumber("Pixel settings above are for pixels of (microns; scaled for other resolutions)", 0.1036);
+Dialog.addNumber("Edge ring width (pixels)", tuned("ringWidth", 5));
+Dialog.addNumber("Gap between objects and background (pixels)", tuned("bgGap", 4));
+Dialog.addNumber("Background ring width (pixels)", tuned("bgWidth", 10));
+Dialog.addNumber("Minimum background pixels per bead", tuned("minBgPixels", 50));
+Dialog.addNumber("Pixel settings above are for pixels of (microns; scaled for other resolutions)", tuned("refPixelUm", 0.1036));
 Dialog.addMessage("Figure images: fluorescence saved with ONE fixed display range for every image\n(display only; pixel values and measurements are not affected)");
-Dialog.addCheckbox("Export figure images", true);
+Dialog.addCheckbox("Export figure images", tuned("exportFig", 1));
 Dialog.addNumber("Display minimum (counts)", tuned("figMin", 0));
 Dialog.addNumber("Display maximum (counts)", tuned("figMax", 4000));
-Dialog.addChoice("Figure colour", newArray("Grays", "Green", "Fire"), "Grays");
-Dialog.addNumber("Scale bar (microns, 0 = none)", 20);
-Dialog.addCheckbox("Also export transmitted-light figure images", false);
-Dialog.show();
+Dialog.addChoice("Figure colour", newArray("Grays", "Green", "Fire"), tunedText("figLut", "Grays"));
+Dialog.addNumber("Scale bar (microns, 0 = none)", tuned("barUm", 20));
+Dialog.addCheckbox("Also export transmitted-light figure images", tuned("exportTL", 0));
+if (!update) Dialog.show();                                 // an update reads the values without showing them
 fileExt = Dialog.getString();
 skipText = Dialog.getString();
 maxFiles = Dialog.getNumber();
@@ -124,7 +140,6 @@ roiManager("reset");
 run("Clear Results");
 print("\\Clear");
 
-sep = File.separator;
 roiDir = outputDir + sep + "rois";
 qcDir = outputDir + sep + "qc";
 figDir = outputDir + sep + "figure_images";
@@ -139,9 +154,32 @@ files = getFileList(inputDir);
 Array.sort(files);
 done = 0;
 
+// An update measures again the images ("|name|" in redo) whose corrected outlines were saved after the
+// image was last measured (after its QC image), and those whose corrections were deleted since.
+redo = "|";
+if (update) {
+	oldLog = File.openAsString(outputDir + sep + "segmentation_log.csv");
+	for (f = 0; f < files.length; f++) {
+		name = files[f];
+		if (!endsWith(toLowerCase(name), toLowerCase(fileExt)) || (skipText != "" && indexOf(name, skipText) >= 0)) continue;
+		base = substring(name, 0, lastIndexOf(name, "."));
+		zip = inputDir + sep + "manual_beads" + sep + base + "_RoiSet.zip";
+		qc = qcDir + sep + base + "_beads.png";
+		if (File.exists(zip)) changed = !File.exists(qc) || File.lastModified(zip) > File.lastModified(qc);
+		else changed = indexOf(oldLog, "\n" + name + ",ok (outlines from manual_beads)") >= 0;
+		if (changed) redo = redo + name + "|";
+	}
+	if (redo == "|") {
+		setBatchMode(false);
+		exit("No outlines were corrected since the results in " + outputDir + " were made,\n"
+			+ "so there is nothing to update.");
+	}
+}
+
 for (f = 0; f < files.length; f++) {
 	name = files[f];
 	if (!endsWith(toLowerCase(name), toLowerCase(fileExt))) continue;
+	if (update && indexOf(redo, "|" + name + "|") < 0) continue;
 	if (skipText != "" && indexOf(name, skipText) >= 0) {
 		print("Skipping " + name);
 		logCsv = logCsv + name + ",skipped (name filter),,,,,,,,\n";
@@ -426,9 +464,12 @@ for (f = 0; f < files.length; f++) {
 	}
 
 	// ---- STEP D: save outlines and a QC image ------------------------------
+	roiZip = roiDir + sep + base + "_RoiSet.zip";
 	if (nBeads > 0) {
 		roiManager("deselect");
-		roiManager("save", roiDir + sep + base + "_RoiSet.zip");
+		roiManager("save", roiZip);
+	} else if (File.exists(roiZip)) {
+		deleted = File.delete(roiZip);                          // an update: the outlines saved before are out of date
 	}
 	saveOutlined("segRaw", nBeads, qcDir + sep + base + "_beads.png");
 	getPlane(probeChannel, nT, "probeShow");
@@ -450,19 +491,29 @@ for (f = 0; f < files.length; f++) {
 	roiManager("reset");
 }
 
-File.saveString(csv, outputDir + sep + "bead_measurements.csv");
-File.saveString(logCsv, outputDir + sep + "segmentation_log.csv");
-settings = "inputDir=" + inputDir + "\nfileExt=" + fileExt + "\nskipText=" + skipText
+beadsFile = outputDir + sep + "bead_measurements.csv";
+logFile = outputDir + sep + "segmentation_log.csv";
+if (update) {                                               // the other images' rows stay as they were
+	csv = replaceRows(beadsFile, csv, redo);
+	logCsv = replaceRows(logFile, logCsv, redo);
+}
+File.saveString(csv, beadsFile);
+File.saveString(logCsv, logFile);
+// "#" lines are notes: the images folder is one so that its \ characters aren't read as codes
+settings = "# images: " + inputDir + "\nfileExt=" + fileExt + "\nskipText=" + skipText
 	+ "\nsegChannel=" + segChannel + "\nprobeChannel=" + probeChannel + "\nsegFrame=" + segFrame
 	+ "\nzSlice=" + zSlice + "\nminDiam=" + minDiam + "\nmaxDiam=" + maxDiam + "\npixelSizeOverride=" + pixelSizeOverride
 	+ "\nshrinkPx=" + shrinkPx + "\nminThreshold=" + minThreshold + "\nminCirc=" + minCirc + "\nmaxCentreContrast=" + maxCC + "\nmaxBrightSpot=" + maxSpot + "\nminEdgeSharpness=" + minSharp
 	+ "\nthresholdMethod=" + thresholdMethod + "\nringWidth=" + ringWidth + "\nbgGap=" + bgGap
-	+ "\nbgWidth=" + bgWidth + "\nminBgPixels=" + minBgPixels + "\nrefPixelUm=" + refPixelUm + "\n";
-if (exportFig) settings = settings + "figure display range=" + figMin + "-" + figMax + " (" + figLut
-	+ ", linear, identical for all images)\nscale bar=" + barUm + " um\n";
-File.saveString(settings, outputDir + sep + "settings_used.txt");
+	+ "\nbgWidth=" + bgWidth + "\nminBgPixels=" + minBgPixels + "\nrefPixelUm=" + refPixelUm
+	+ "\n# figure images: one fixed, linear display range for every image\nexportFig=" + exportFig
+	+ "\nfigMin=" + figMin + "\nfigMax=" + figMax + "\nfigLut=" + figLut + "\nbarUm=" + barUm
+	+ "\nexportTL=" + exportTL + "\n";
+File.saveString(settings, usedFile);
 setBatchMode(false);
-print("Done: " + done + " file(s). Results in " + outputDir);
+if (update) print("Measured again " + done + " image(s) whose corrected outlines changed. "
+	+ "Run analyze.py and make_figures.py again.");
+else print("Done: " + done + " file(s). Results in " + outputDir);
 
 
 // ======================= helper functions =================================
@@ -631,10 +682,26 @@ function selectionPercentile(p) {
 	return values[nBins - 1];
 }
 
-// This experiment's value of a setting from segmentation_settings.txt, else the default.
+// This experiment's value of a setting from segmentation_settings.txt (or, in an update, settings_used.txt),
+// else the default: a number, or text with tunedText.
 function tuned(key, default) {
 	if (List.get(key) == "") return default;
 	return parseFloat(List.get(key));
+}
+
+function tunedText(key, default) {
+	if (List.get(key) == "") return default;
+	return List.get(key);
+}
+
+// The rows of a results table saved before, with those of the images measured again (named in redo)
+// replaced by their new rows (newText, after its header line).
+function replaceRows(path, newText, redo) {
+	old = split(File.openAsString(path), "\r\n");
+	text = old[0] + "\n";
+	for (i = 1; i < old.length; i++)
+		if (indexOf(redo, "|" + substring(old[i], 0, indexOf(old[i], ",")) + "|") < 0) text = text + old[i] + "\n";
+	return text + substring(newText, indexOf(newText, "\n") + 1);
 }
 
 // Remove a trailing / or \ from a folder path.

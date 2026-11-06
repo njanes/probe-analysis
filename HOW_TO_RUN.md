@@ -50,7 +50,8 @@ The three steps, for one experiment at a time (exp2 here; for another, change `e
 
 1. **Fiji macro**
    - Make a new, empty folder called `results` inside `exp2`. If there is already a `results` folder,
-     rename it or move it somewhere else first.
+     rename it or move it somewhere else first. (Choosing a folder that already has results only
+     updates it with your corrected outlines: see "Correcting the bead outlines by hand" below.)
    - In Fiji: File > Open..., choose `bead_segmentation.ijm` (in the project folder), then press Run.
    - It asks for two folders: choose `exp2` first, then `exp2/results`.
    - The settings window opens with exp2's tuned settings, and says so at the top. Click OK without
@@ -124,13 +125,21 @@ you can correct that image's outlines:
    When you're done with the image, close it, and the macro offers the next image.
    - If outlines you add stop turning green, the macro has stopped (pressing Esc on the image can do
      that). What you did until then is saved: close the image and run the macro again to carry on.
-4. When you've corrected every image you want to, run all three steps again with a new, empty
-   `results` folder. For each corrected image, the macro measures your outlines instead of finding
-   its own, with no size, shape or focus checks. `segmentation_log.csv` marks those images "outlines
-   from manual_beads".
+4. When you've corrected every image you want to, update the results:
+   - Run `bead_segmentation.ijm` again and choose the same two folders as before (`exp2`, then
+     `exp2/results`). It sees that the folder already has results and asks what to do: click Update.
+   - It measures again only the images whose outlines you've corrected (or whose corrections you've
+     deleted) since the results were made, with the same settings as before, and leaves every other
+     image's results as they are. For each corrected image it measures your outlines instead of
+     finding its own, with no size, shape or focus checks. `segmentation_log.csv` marks those images
+     "outlines from manual_beads".
+   - Then run `python exp2/analyze.py` and `python exp2/make_figures.py` again.
+
+   You can correct a few images, update, and correct more later: each update only does what changed.
 
 Running `edit_beads.ijm` on an image again starts from your corrected outlines. To go back to the
-automatic outlines, delete the image's file from the experiment's `manual_beads` folder.
+automatic outlines, delete the image's file from the experiment's `manual_beads` folder, then update
+the results as in step 4.
 
 ## Adding new images
 

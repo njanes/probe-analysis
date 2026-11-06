@@ -8,7 +8,8 @@
 //      outlines, and add missed beads one at a time with the oval tool and T: each one added
 //      turns green. Each change is saved, in a "manual_beads" folder inside the experiment folder.
 //      Close the image when done, and it offers the next image.
-//   3. Run bead_segmentation.ijm again. For each image with saved outlines it measures those
+//   3. Run bead_segmentation.ijm again, choosing the same results folder, and click Update: it
+//      measures again only the images whose outlines you corrected since, using your outlines
 //      instead of finding its own. Then run analyze.py and make_figures.py as usual.
 // Running this macro again on an image starts from its saved outlines (all cyan then). To go
 // back to the automatic outlines, delete the image's file from manual_beads.
@@ -105,7 +106,7 @@ if (isOpen(HELP)) {
 	selectWindow(HELP);
 	run("Close");
 }
-print("Run bead_segmentation.ijm again to measure the corrected outlines.");
+print("To measure the corrected outlines, run bead_segmentation.ijm again into the same results folder and click Update.");
 
 
 // An outline just added (number k) is kept, in the added colour, if it is one region the size of a
