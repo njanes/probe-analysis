@@ -1,0 +1,18 @@
+# Fiji settings tuned for exp2: bead_segmentation.ijm opens with these when this folder is chosen
+# (names as in results/settings_used.txt, which records what each run used).
+# Lowest allowed threshold 150: the later run's transmitted light was mostly taken at 530 to 570 V, against 310 to
+# 400 V in the earlier run, so its images are grainier and at 80 the grain is outlined instead of the beads
+# (16 of its 24 images found no bead). At 150 every image finds beads (100 beads instead of 51); the earlier
+# run keeps 207 of the 221 beads it finds at 80.
+minDiam=3.8
+maxDiam=7.0
+minCirc=0.75
+maxCentreContrast=0.2
+maxBrightSpot=0.35
+minEdgeSharpness=0.09
+shrinkPx=5
+minThreshold=150
+# Figure images (display only): 0 to 1000 counts, where most beads after treatment lie (half are under
+# about 160 counts and 90% under about 880), so they show in fig0.
+figMin=0
+figMax=1000

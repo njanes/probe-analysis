@@ -1,15 +1,14 @@
 """
-make_figures.py: draws the figures from the tables analyze.py wrote (nothing is recalculated), with
-Altair. Run from the project folder, after analyze.py, naming the same study folder if any:
-  python3 make_figures.py           or   python3 make_figures.py study2
+make_figures.py for exp1, the first study: draws the figures from the tables analyze.py wrote (nothing is
+recalculated), with Altair. Run after exp1's analyze.py:
+  python exp1/make_figures.py
 
-Saves PNG (300 dpi) and SVG files to results/analysis (in the study's folder):
+Saves PNG (300 dpi) and SVG files to exp1/results/analysis:
   fig0_representative_images   typical before/after image per treatment (green), one fixed display range, for the
                                treatments in settings.REPRESENTATIVE_IMAGES
   fig1_dilution_response       each well's change as % of the strongest dilution, mean ± SD, fitted curve
                                (only if analyze.py fitted the curve, which needs 4 probe dilutions)
-  fig2_before_after            mean fluorescence before and after, for the bars in settings.BEFORE_AFTER (which
-                               can name further before/after charts in the same style)
+  fig2_before_after            mean fluorescence before and after, for the treatments in settings.BEFORE_AFTER
   fig3_positive_beads          % of beads positive after treatment, for the treatments in settings.POSITIVE_BEADS
   fig4_change_per_well         each well's change in fluorescence (after − before), mean ± SD, for the
                                treatments in settings.CHANGE_PER_WELL
@@ -19,10 +18,7 @@ import base64
 import io
 import json
 import math
-import runpy
-import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 import altair as alt
 import numpy as np
@@ -30,8 +26,9 @@ import pandas as pd
 import vl_convert
 from PIL import Image
 
-FOLDER = Path(sys.argv[1] if len(sys.argv) > 1 else ".")          # the study's folder, as for analyze.py
-S = SimpleNamespace(**runpy.run_path(str(FOLDER / "settings.py")))
+import settings as S                                             # exp1/settings.py, next to this file
+
+FOLDER = Path(__file__).resolve().parent                         # exp1, as for analyze.py
 RESULTS = FOLDER / "results"
 OUT = RESULTS / "analysis"
 wells = pd.read_csv(OUT / "well_summary.csv")
@@ -39,11 +36,7 @@ reps = pd.read_csv(OUT / "representative_images.csv")
 fit = pd.read_csv(OUT / "dilution_fit.csv")                       # no rows if the curve wasn't fitted
 tests = pd.read_csv(OUT / "figure_tests.csv")
 ORDER = list(dict.fromkeys(wells["treatment"]))  # treatments in display order, as analyze.py sorted the wells
-# probe dilutions, most diluted first, including those of other studies the before/after charts use, so each
-# dilution has the same blue in every study
-OTHERS = [t for f in S.OTHER_STUDIES if (Path(f) / "results" / "analysis" / "well_summary.csv").exists()
-          for t in pd.read_csv(Path(f) / "results" / "analysis" / "well_summary.csv")["treatment"]]
-PROBES = sorted({t for t in ORDER + OTHERS if t.startswith("Probe 1:")}, key=lambda t: -int(t.split(":")[1]))
+PROBES = [t for t in ORDER if t.startswith("Probe 1:")]                   # probe dilutions, most diluted first
 
 # ---- style: sizes are in points (1 chart unit = 1 pt), so PNGs are saved at 300/72 scale = 300 dpi ----
 INK, INK2, EDGE, GRID = "#0b0b0b", "#52514e", "#c3c2b7", "#e1e0d9"
@@ -277,58 +270,44 @@ if len(fit):                                       # analyze.py fits the curve o
     ).properties(width=W1, height=H1)
     save(fig1, "fig1_dilution_response")
 
-# ---- Before/after charts (fig2 and any others in settings.BEFORE_AFTER): mean fluorescence, paired bars -------
-# A bar pools the wells analyze.py listed for it in before_after_wells.csv, shown as dots if settings.WELL_DOTS.
-# Probe bars keep their dilution's blue (a note in brackets after the dilution is allowed); the other bars are
-# greys, lightest first.
-pooled = pd.read_csv(OUT / "before_after_wells.csv") if S.BEFORE_AFTER else None
-for fig, figure_bars in S.BEFORE_AFTER.items():
-    groups = [bar for bar in figure_bars if ((pooled["figure"] == fig) & (pooled["bar"] == bar)).any()]
-    if not groups:                                 # every bar without wells (analyze.py warned)
-        continue
-    probe = {t: t.split(" (")[0] for t in groups if t.split(" (")[0] in PROBES}   # "Probe 1:1000 (recent)": 1:1000
-    greys = [t for t in groups if t not in probe]
-    shade = {**dict(zip(greys, ramp([GREY, DARK_GREY], len(greys)))), **{t: COLOR[d] for t, d in probe.items()}}
+# ---- Figure 2: mean fluorescence before and after, paired bars (open = before, filled = after) --------------
+groups = [t for t in S.BEFORE_AFTER if t in ORDER]      # a treatment without wells is left out (analyze.py warned)
+if groups:
     W2, H2 = slot(groups, 110) * len(groups), 320
-    rows, dots = [], []
+    rows = []
     for i, t in enumerate(groups):
-        w = pooled[(pooled["figure"] == fig) & (pooled["bar"] == t)]
-        for tp, dx in (("before", -0.19), ("after", 0.19)):           # before: open bar; after: filled
+        w = wells[wells["treatment"] == t]
+        for tp, dx in (("before", -0.19), ("after", 0.19)):
             rows.append({"group": i, "timepoint": tp, "x": i + dx, "x0": i + dx - 0.16, "x1": i + dx + 0.16,
-                         "zero": 0, **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else shade[t],
-                         "stroke": GREY if tp == "before" else shade[t]})
-            # a dot per well, side by side across the bar (a well keeps its place in the before and after bars)
-            dots += [{"group": i, "x": i + dx + off, "y": y} for off, y in zip(spread(len(w), 0.11), w[f"F_{tp}"])]
+                         "zero": 0, **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else COLOR[t],
+                         "stroke": GREY if tp == "before" else COLOR[t]})
     pairs = pd.DataFrame(rows)
     pairs["lo"] = pairs["lo"].clip(lower=0)                    # an error bar stops at 0 (fluorescence above background)
-    dots = pd.DataFrame(dots, columns=["group", "x", "y"]).iloc[:None if S.WELL_DOTS else 0]   # none if not shown
-    heights = pd.concat([pairs.melt("group", ["mean", "hi"], value_name="y")[["group", "y"]], dots[["group", "y"]]])
+    heights = pairs.melt("group", ["mean", "hi"], value_name="y")[["group", "y"]]
     scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
     axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
-    # significance: before vs after over each pair (paired t-test), then above, after bars compared: the probe's
-    # vs the negative control's (Welch's t-test), or each bar's vs the settings.COMPARE_TO bars' (Dunnett's test)
-    t2, top = tests[tests["figure"] == fig.split("_")[0]], heights["y"].max()
+    # significance: before vs after over each pair (paired t-test), then above, the probe's after bar vs the
+    # negative control's (Welch's t-test)
+    t2, top = tests[tests["figure"] == "fig2"], heights["y"].max()
     marks = [{"x1": i - 0.19, "x2": i + 0.19, "label": p_label(r.p),
               "y": heights.loc[heights["group"] == i, "y"].max() + 0.06 * top}
              for r in t2[t2["test"].str.startswith("paired")].itertuples() for i in [groups.index(r.a)]]
     marks += pair_brackets(t2[~t2["test"].str.startswith("paired")], {t: i + 0.19 for i, t in enumerate(groups)},
                            1.2 * top, 0.13 * top)
-    Y2 = linear_y(np.nanmin([pairs["lo"].min(), dots["y"].min(), 0]),
-                  max([m["y"] for m in marks] + [top]) + 0.12 * top, "Normalized bead fluorescence", tick_hi=1.05 * top)
+    Y2 = linear_y(min(pairs["lo"].min(), 0), max([m["y"] for m in marks] + [top]) + 0.12 * top,
+                  "Normalized bead fluorescence", tick_hi=1.05 * top)
     chart = alt.layer(
         alt.Chart(pairs).mark_rect(strokeWidth=1.2).encode(
             alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
             fill=alt.Fill("fill:N", scale=None), stroke=alt.Stroke("stroke:N", scale=None)),
         *error_bars(pairs, alt.X("x:Q", scale=scale2x), Y2),
-        *([alt.Chart(dots).mark_point(shape="circle", filled=True, fill=INK, stroke="white", strokeWidth=0.8, size=28,
-                                      opacity=1).encode(alt.X("x:Q", scale=scale2x), Y2("y"))] if len(dots) else []),
         *brackets(marks, scale2x, Y2, drop=0.025 * top),
         # treatment names under the before/after labels
         alt.Chart(pd.DataFrame({"x": range(len(groups)), "t": ["\n".join(x_label(t)) for t in groups]})).mark_text(
             baseline="top", lineBreak="\n", fontSize=8, color=INK).encode(
             x=alt.X("x:Q", scale=scale2x), y=alt.value(H2 + 20), text="t:N"),
     ).properties(width=W2, height=H2)
-    save(chart, fig)
+    save(chart, "fig2_before_after")
 
 # ---- Figure 3: % of beads positive after treatment --------------------------------------------------------
 groups = chosen(S.POSITIVE_BEADS)

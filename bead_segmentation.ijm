@@ -5,6 +5,8 @@
 // HOW TO RUN
 //   Fiji > File > Open... > this file, then press Run (or Plugins > Macros > Run...).
 //   It asks for the image folder, then an output folder, then shows the settings.
+//   If the image folder has a segmentation_settings.txt (each experiment folder does),
+//   the settings open with the values tuned in it.
 //   Tip: set "Process only the first N files" to 2 or 3, check the QC images,
 //   adjust, then run everything with 0.
 //
@@ -46,7 +48,14 @@
 inputDir = stripSlash(getDirectory("Choose the folder with your images"));
 outputDir = stripSlash(getDirectory("Choose an EMPTY folder for the results"));
 
+// settings tuned for this experiment, if its folder has them (names as in settings_used.txt, plus figMin
+// and figMax for the figure display range)
+tunedFile = inputDir + File.separator + "segmentation_settings.txt";
+List.clear();
+if (File.exists(tunedFile)) List.setList(File.openAsString(tunedFile));
+
 Dialog.create("Bead segmentation settings");
+if (File.exists(tunedFile)) Dialog.addMessage("Settings tuned for this folder (segmentation_settings.txt)");
 Dialog.addString("File extension", ".oir");
 Dialog.addString("Skip files whose name contains (blank = none)", "Background", 20);
 Dialog.addNumber("Process only the first N files (0 = all)", 0);
@@ -56,16 +65,16 @@ Dialog.addNumber("Frame to find beads in (1 = first)", 1);
 Dialog.addNumber("Z slice if z-stack (0 = max projection)", 0);
 Dialog.addNumber("Pixel size in microns (0 = read from file)", 0);
 Dialog.addMessage("Size range of bead outlines in the transmitted-light image (incl. halo).\nYour beads measure 4.1-6.3 um this way; debris is under 3.2 um.");
-Dialog.addNumber("Keep objects at least this wide (microns)", 3.8);
-Dialog.addNumber("Keep objects at most this wide (microns)", 7.0);
-Dialog.addNumber("Minimum circularity (1 = perfect circle)", 0.75);
+Dialog.addNumber("Keep objects at least this wide (microns)", tuned("minDiam", 3.8));
+Dialog.addNumber("Keep objects at most this wide (microns)", tuned("maxDiam", 7.0));
+Dialog.addNumber("Minimum circularity (1 = perfect circle)", tuned("minCirc", 0.75));
 Dialog.addMessage("Out-of-focus beads (transmitted light; 0 = check off)");
-Dialog.addNumber("Maximum centre contrast (bright or dark centre = above or below focus)", 0.2);
-Dialog.addNumber("Maximum bright spot in the centre (catches blurred beads the above misses)", 0.35);
-Dialog.addNumber("Minimum edge sharpness (soft edges = smeared blur)", 0.09);
-Dialog.addNumber("Shrink outlines before measuring (pixels)", 5);
+Dialog.addNumber("Maximum centre contrast (bright or dark centre = above or below focus)", tuned("maxCentreContrast", 0.2));
+Dialog.addNumber("Maximum bright spot in the centre (catches blurred beads the above misses)", tuned("maxBrightSpot", 0.35));
+Dialog.addNumber("Minimum edge sharpness (soft edges = smeared blur)", tuned("minEdgeSharpness", 0.09));
+Dialog.addNumber("Shrink outlines before measuring (pixels)", tuned("shrinkPx", 5));
 Dialog.addChoice("Threshold method", newArray("Otsu", "Triangle", "Li", "Huang", "Default"), "Otsu");
-Dialog.addNumber("Lowest allowed threshold (stops noise being outlined when few beads)", 80);
+Dialog.addNumber("Lowest allowed threshold (stops noise being outlined when few beads)", tuned("minThreshold", 80));
 Dialog.addNumber("Edge ring width (pixels)", 5);
 Dialog.addNumber("Gap between objects and background (pixels)", 4);
 Dialog.addNumber("Background ring width (pixels)", 10);
@@ -73,8 +82,8 @@ Dialog.addNumber("Minimum background pixels per bead", 50);
 Dialog.addNumber("Pixel settings above are for pixels of (microns; scaled for other resolutions)", 0.1036);
 Dialog.addMessage("Figure images: fluorescence saved with ONE fixed display range for every image\n(display only; pixel values and measurements are not affected)");
 Dialog.addCheckbox("Export figure images", true);
-Dialog.addNumber("Display minimum (counts)", 0);
-Dialog.addNumber("Display maximum (counts)", 4000);
+Dialog.addNumber("Display minimum (counts)", tuned("figMin", 0));
+Dialog.addNumber("Display maximum (counts)", tuned("figMax", 4000));
 Dialog.addChoice("Figure colour", newArray("Grays", "Green", "Fire"), "Grays");
 Dialog.addNumber("Scale bar (microns, 0 = none)", 20);
 Dialog.addCheckbox("Also export transmitted-light figure images", false);
@@ -620,6 +629,12 @@ function selectionPercentile(p) {
 		if (cum >= p * total) return values[k];
 	}
 	return values[nBins - 1];
+}
+
+// This experiment's value of a setting from segmentation_settings.txt, else the default.
+function tuned(key, default) {
+	if (List.get(key) == "") return default;
+	return parseFloat(List.get(key));
 }
 
 // Remove a trailing / or \ from a folder path.

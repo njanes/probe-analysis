@@ -6,6 +6,10 @@ and 1:100, against buffer only) and experiment 2 (dilutions 1:100000 to 1:1000, 
 control). The aim: measure how much probe binds the beads, whether the binding is specific, how it
 depends on the dilution, and the signal-to-noise ratio (SNR).
 
+The project has three experiments, each analysed in its own folder with its own scripts and only its own
+images: **exp1** is this first study (its two runs are called experiment 1 and experiment 2 below), and
+**exp2** and **exp3** are described in [Experiments 2 and 3](#experiments-2-and-3-exp2-and-exp3-folders).
+
 ## Key findings
 
 - **The probe binds the beads, and the binding is specific.** At 1:3333, probe-treated beads gained
@@ -248,64 +252,51 @@ and saturation caps the SNR of the brightest beads as well.
 | Out-of-focus beads, many in clumps of stacked beads | Left out, so fewer beads are measured per well. | Let beads settle fully before imaging, use fewer beads per well to avoid stacking, and focus on the bead equator. |
 | Experiment 1 file labelling errors and missing positions | Corrected from the plate map; some wells have 2 images instead of 3. | Use file codes that match the dilutions and check each well's name before saving. |
 
-## Second study (study2 folder)
+## Experiments 2 and 3 (exp2 and exp3 folders)
 
-Two further runs, analysed in the `study2` folder with their own settings (`study2/settings.py`), so the
-first study's results above are unchanged. The images are used with the names they were saved under.
-Each run's wells are its own: the second run's treatment names end in ", second run".
+Two further experiments, each analysed in its own folder with its own `analyze.py`, `make_figures.py` and
+`settings.py`, using only its own images. The images are used with the names they were saved under.
+
+**exp2** (two runs; the fluorescence detector settings were the same in both, so their counts are comparable)
 
 | Run | Wells | Treatment | Word in the file names |
 |---|---|---|---|
-| First | W1 to W3 | Negative control (MFG-E8) | `negctrlMFGE8` |
-| First | W4 to W6 | Negative control (GFP) | `negctrlGFP` |
-| First | W7 to W9 | Annexin-V | `annexin` |
-| First | W10 | Probe 1:1000 | `1to1000` |
-| First | W12 and W13 | Positive control (BSA precoat) | `posctrlBSAprecoat` |
-| First | W14 and W15 | Probe 1:3333 | `1to3333` |
-| First | W16 and W17 | Not analysed (marked `dontuse`) | `dontuse` |
-| Second | W1 to W3 | Negative control (MFG-E8) | `Mnegvectrl_1to1000` |
-| Second | W4 to W6 | Negative control (GFP) | `Mgfponly_1to1000` |
-| Second | W7 to W9 | Annexin-V | `Mposctrl_1to1000` |
-| Third | W1 to W3 | Probe 1:1000 | `1to1000` |
-| Third | W4 | Not analysed (before images only) | `1to3333` |
+| Earlier | W1 to W3 | Negative control (MFG-E8) | `negctrlMFGE8` |
+| Earlier | W4 to W6 | Negative control (GFP) | `negctrlGFP` |
+| Earlier | W7 to W9 | Annexin-V | `annexin` |
+| Earlier | W10 | Probe 1:1000 | `1to1000` |
+| Earlier | W12 and W13 | Positive control (BSA precoat) | `posctrlBSAprecoat` |
+| Earlier | W14 and W15 | Probe 1:3333 | `1to3333` |
+| Later | W1 to W3 | Probe 1:1000 | `1to1000` |
+| Later | W4 | Probe 1:3333 (before images only, so not compared) | `1to3333` |
 
-The third run is in its own folder, `study3` (with its own `settings.py`), because it uses the same
-words as the first run; study2's fig6 uses its wells, named "Probe 1:1000, third run". Its cell images
-(`Arantxa_..._diffSY5Y`) are left out (`EXCLUDE`). It also makes its own figures from its images, in
-`study3/results/analysis`: fig0 (representative images), **fig7_before_after_third_run** (its 1:1000
-before and after, in the style of fig2), fig3 (% positive beads) and fig4 (change per well). There is
-no fig1: the curve needs at least 4 dilutions. W1 had no usable before images (no bead passed the
-checks), so it takes the mean before values of W2 and W3 and is compared like them (`BORROW_BEFORE` in
-`study3/settings.py`; the report lists it).
+A well is identified by its number and treatment, so the later run's W1 to W3 (1:1000) are different wells
+from the earlier run's W1 to W3 (MFG-E8). Probe 1:1000 pools W10 and the later run's W1 to W3.
 
-Three figures, each in the style of fig2 above (before and after bars, mean ± SD of the wells, paired
-t-test brackets), with a dot for each well on the bars. In all before/after charts an error bar stops
-at 0:
+**exp3** (one run; every well had media, the M in the file names)
 
-- **fig2_before_after:** the first study's fig2 with this study's wells added. Annexin-V holds the
-  first study's buffer-only wells (W10 to W12), the first run's W7 to W9 and the second run's W9;
-  1:3333 holds the first study's 3 well values and the first run's W14 and W15; the negative control
-  1:3333 is the first study's. The probe's after bar is again compared with the negative control's
-  (Welch's t-test).
-- **fig5_before_after_first_run:** the first run's MFG-E8, GFP and BSA precoat, with 1:1000.
-- **fig6_before_after_second_run:** the second run's MFG-E8 and GFP, then two 1:1000 bars (the second
-  run had no probe): previous, the first study's 1:1000 wells (W1 to W3) and the first run's W10, and
-  recent, the third run's W1 to W3. **fig6b** is the same without the 1:1000s, on its own scale, and
-  **fig6c** with the recent 1:1000 only, compared with both negative controls.
-- In fig5, 1:1000 is the same as fig6's previous 1:1000. Each other bar's after-treatment fluorescence
-  is compared with 1:1000's in fig5. In fig6, every other bar is compared with the previous 1:1000
-  (including the recent 1:1000), and the negative controls with the recent 1:1000 too. These use
-  Dunnett's test, which corrects for comparing several bars with one, once for each 1:1000
-  (`COMPARE_TO` in `study2/settings.py`).
+| Wells | Treatment | Word in the file names |
+|---|---|---|
+| W1 to W3 | Negative control (MFG-E8) | `Mnegvectrl_1to1000` |
+| W4 to W6 | Negative control (GFP) | `Mgfponly_1to1000` |
+| W7 to W9 | Positive control (BSA precoat) | `Mposctrl_1to1000` |
 
-- The images marked `(400HV)` were taken at a different detector voltage and aren't used (`EXCLUDE`
-  in `study2/settings.py`). Every other image of a well is used; a position saved twice (`_0001`) is
-  checked as described below.
-- The second run's Annexin-V W7 and W8 have before images only, so they aren't compared.
-- Fig2 adds these wells to the first study's well values (`results/analysis/well_summary.csv`) and fig6
-  uses the third run's (`study3/results/analysis/well_summary.csv`), so those are analysed first.
-  Figures 0, 1, 3 and 4 aren't made for study2, and the report notes that Tests 1 to 3 weren't run:
-  they need treatments this study doesn't have.
+- Some after images were also taken with the fluorescence detector at 400 V instead of 360 V (marked
+  `(400HV)`). Those of W1_3 and W9 are retakes of fields also imaged at 360 V, which are used instead
+  (`EXCLUDE`). W7's only after image was taken this way and saved as `Mgfponly_..._W7_3 (400HV)`: it is
+  read as the positive control's W7 (`RENAME`), and its bead signal is scaled to 360 V by 0.45: at
+  400 V the same beads read 2.2 times as bright, measured on the 9 beads of the W9 fields imaged at both
+  voltages (`SCALE`). Its SNR and background are as recorded, and it is never shown in fig0.
+- The positive control's W8 has before images only, so it isn't compared.
+
+**Figures** (in each folder's `results/analysis`; a figure number means the same kind of figure as in exp1):
+fig0 (representative images), **fig2_before_after** (before and after bars, mean ± SD of the wells, with a
+dot for each well; an error bar stops at 0), fig3 (% positive beads) and fig4 (change per well), each for
+every treatment. In exp2's fig2 each bar is tested before vs after (paired t-test), and every other
+treatment's after-treatment fluorescence is compared with the probe at 1:1000 (Dunnett's test, which
+corrects for comparing several treatments with one); 1:1000 is the last bar, so it can be cropped off.
+exp3 has no probe-only wells, so its fig2 tests each bar before vs after only. There is no fig1 and no
+Tests 1 to 3 in either: they need probe dilutions and buffer or negative controls at the same dilution.
 
 ## Files and re-running
 
@@ -313,49 +304,49 @@ at 0:
 probe-analysis/
 ├── HOW_TO_RUN.md           short guide for the researcher: what each script does and how to run it
 ├── bead_segmentation.ijm   Fiji macro: finds the beads and measures their fluorescence
-├── edit_beads.ijm          Fiji macro: correct an image's bead outlines by hand (saved in images/manual_beads/)
-├── settings.py             treatment names, images to leave out, images per well, detector maximum, figures
-├── analyze.py              labels the files, picks the images, calculates results, runs the statistics
-├── make_figures.py         makes the figures from analyze.py's tables
-├── data/                   original experiment 1 .oir images, with their original names
-├── images/                 the images analysed, both experiments, renamed (name_map.csv gives the original names)
-├── results/                macro output: bead_measurements.csv, segmentation_log.csv, qc/, rois/, figure_images/,
-│                           settings_used.txt
-│   └── analysis/           Python output: tables, stats_report.txt (full statistics), figures, figures.html (all on one page)
-├── study2/                 the second study: its settings.py, and its own images/ and results/ laid out as above
-└── study3/                 the third run, laid out the same way
+├── edit_beads.ijm          Fiji macro: correct an image's bead outlines by hand (saved in the experiment's manual_beads/)
+├── images/                 the first study's images, renamed (name_map.csv gives the original names); copied into exp1
+├── exp1/                   the first study, as below
+│   ├── *.oir               its images
+│   ├── segmentation_settings.txt   the bead-finding settings tuned for its images, loaded by the Fiji macro
+│   ├── settings.py         treatment names, images to leave out, images per well, detector maximum, figures
+│   ├── analyze.py          labels the files, picks the images, calculates results, runs the statistics
+│   ├── make_figures.py     makes the figures from analyze.py's tables
+│   └── results/            macro output: bead_measurements.csv, segmentation_log.csv, qc/, rois/, figure_images/,
+│       │                   settings_used.txt
+│       └── analysis/       Python output: tables, stats_report.txt (full statistics), figures, figures.html
+├── exp2/                   laid out the same way
+└── exp3/                   laid out the same way
 ```
 
 Requires Fiji (it includes Bio-Formats, which opens .oir files) and Python 3.10 or newer with the
 packages in `requirements.txt`.
 
-1. Run `bead_segmentation.ijm` in Fiji on `images`, saving to `results`, with the default settings
+1. Run `bead_segmentation.ijm` in Fiji on the experiment's folder (such as `exp1`), saving to its
+   `results`. The settings window opens with the values in the folder's `segmentation_settings.txt`
    (recorded in `results/settings_used.txt`).
    - Optional: to correct an image's outlines by hand, run `edit_beads.ijm`, then step 1 again into an
-     empty `results`. Corrected outlines are saved in `images/manual_beads/` and measured as drawn, with no
-     size, shape or focus checks (`HOW_TO_RUN.md` has the steps).
-2. From the project folder: `python3 analyze.py`, then `python3 make_figures.py`.
+     empty `results`. Corrected outlines are saved in the experiment's `manual_beads/` and measured as
+     drawn, with no size, shape or focus checks (`HOW_TO_RUN.md` has the steps).
+2. From the project folder: `python3 exp1/analyze.py`, then `python3 exp1/make_figures.py`.
 
-A study in its own folder (such as `study2`) has its own `settings.py`, `images` and `results`; name the
-folder when running the scripts: `python3 analyze.py study2`, then `python3 make_figures.py study2`.
-New images and results folders are left out of git (`.gitignore`), so pulling an update never
-changes them.
+Images and results folders are left out of git (`.gitignore`), so pulling an update never changes them.
 
 **Adding images.** The analysis reads everything it needs from the file names, so new images that
 follow the naming convention are added to the tables, tests and figures automatically: copy them
-into the study's `images` folder and re-run both steps on the whole folder. Nothing in the code needs
-changing; a treatment word not seen before is added to `GROUPS` in the study's `settings.py`. Nothing
-stops the run except a missing `settings.py` or macro output: an image whose name can't be read, a
-treatment with no wells, or another study not yet analysed is left out of the tables and figures, with
+into the experiment's folder and re-run both steps on the whole folder. Nothing in the code needs
+changing; a treatment word not seen before is added to `GROUPS` in the experiment's `settings.py`.
+Nothing stops the run except missing macro output: an image whose name can't be read or a treatment
+with no wells is left out of the tables and figures, with
 a WARNING line in the report saying what and why. The text and tables of this README are written by
-hand, so update them from `results/analysis/stats_report.txt`.
+hand, so update them from each experiment's `results/analysis/stats_report.txt`.
 
 File names read as `{before or after}_{treatment}_W{well}_{position}.oir`, for example
 `after_probe-1to3333_W04_2.oir`. Capital letters and spaces are ignored and a doubled underscore
 counts as one, so `before__1to1000_W10_2.oir` and `after_ Mposctrl_1to1000_W9_3 (400HV).oir` read
 like the others.
 
-- **Treatment:** a word listed in `GROUPS` in the study's `settings.py`, which gives its name. In
+- **Treatment:** a word listed in `GROUPS` in the experiment's `settings.py`, which gives its name. In
   the first study, `buffer`, `negctrl` or `probe`, followed by the dilution if there is one
   (`probe-1to3333` = probe 1:3333). A before image that is the baseline for several dilutions lists
   them all (`probe-1to3333-5000-10000`). A word set to `None` is left out. Tables and figures show
@@ -366,22 +357,19 @@ like the others.
   in brackets (`(400HV)`), which marks a separate image. `background` in place of the position (or
   as the whole name) marks a background image, which is left out. Each well uses at most
   `MAX_IMAGES_PER_WELL` images per timepoint (3 in the first study, those with the most beads; no
-  limit in `study2`).
+  limit in exp2 and exp3).
 - **Saved twice:** a position saved again (`_0001`, `_0002`) is checked by bead positions. If most
   beads of the later save lie within 2 µm of beads of the earlier one, it is the same field retaken
   and only the latest save is used; otherwise each save is used as a field of its own. The report
   lists each decision.
-- A well is compared once it has images at both timepoints. With `BORROW_BEFORE` in the study's
-  settings, a well with after images only is compared too, using the mean before values of its
-  treatment's other wells. Test 1 compares every probe dilution
-  ("Probe 1:N") with "Buffer only", Test 2 each "Negative control 1:N" with the probe at the same
-  dilution, and Test 3 runs over every probe well (at least 3 dilutions); a test runs only when the
-  study has the treatments it needs. The fig1 curve needs at least 4 probe dilutions.
-- `BEFORE_AFTER` in `settings.py` lists the before/after charts (fig2 and any others): each chart's
-  bars, and the treatments whose wells each bar holds. A treatment of a study listed in
-  `OTHER_STUDIES` is named with the words given there (study2 uses "Buffer only, first study").
-  `REPRESENTATIVE_IMAGES`, `POSITIVE_BEADS` and `CHANGE_PER_WELL` choose the treatments in figs 0, 3
-  and 4 (`None` = all, `[]` = no figure). `FIGURE_NAMES` relabels a treatment in the figures.
+- A well is compared once it has images at both timepoints. In exp1, Test 1 compares every probe
+  dilution ("Probe 1:N") with "Buffer only", Test 2 each "Negative control 1:N" with the probe at the
+  same dilution, and Test 3 runs over every probe well (at least 3 dilutions). The fig1 curve needs at
+  least 4 probe dilutions.
+- `BEFORE_AFTER` in `settings.py` lists fig2's treatments, in order (in exp2, `COMPARE_TO` names the
+  one the others are compared with). `REPRESENTATIVE_IMAGES`, `POSITIVE_BEADS` and `CHANGE_PER_WELL`
+  choose the treatments in figs 0, 3 and 4 (`None` = all). In exp1, `FIGURE_NAMES` relabels a treatment
+  in the figures.
 - To leave out an image for another reason, add it to `EXCLUDE` in `settings.py` with the reason.
 
 **Measurement settings** (1 pixel = 0.104 µm): beads kept if 3.8 to 7 µm across in transmitted
@@ -392,3 +380,11 @@ brightest central spot is more than 35% above it (bright spot), or its edge shar
 Outlines shrunk by 5 pixels to match the fluorescent ring; ring width 5 pixels; background measured
 in a 10-pixel band starting 4 pixels outside the outline, excluding pixels near other objects.
 Saturated = any pixel at 4095 (12-bit maximum).
+
+These are exp1's values. Each experiment's folder has its own, in `segmentation_settings.txt`, which the
+macro loads: exp2's threshold is never below 150, because its later run's transmitted light was taken at
+a higher detector voltage (mostly 530 to 570 V, against 310 to 400 V) and is grainier, so at 80 the grain
+was outlined instead of the beads (16 of its 24 images found no bead; at 150 all find beads, while the
+earlier run keeps 207 of its 221). exp3 uses exp1's values, which find the most beads in its images. The
+figure images (display only) span 0 to 4000 counts in exp1, 0 to 1000 in exp2 and 0 to 200 in exp3, so
+each experiment's beads show in fig0.

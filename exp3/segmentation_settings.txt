@@ -1,0 +1,16 @@
+# Fiji settings tuned for exp3: bead_segmentation.ijm opens with these when this folder is chosen
+# (names as in results/settings_used.txt, which records what each run used).
+# Checked on its images: 80 finds the most beads (193, against 190 at 120). The many small round objects left
+# out (about 3 um across, not fluorescent) are other particles, not beads.
+minDiam=3.8
+maxDiam=7.0
+minCirc=0.75
+maxCentreContrast=0.2
+maxBrightSpot=0.35
+minEdgeSharpness=0.09
+shrinkPx=5
+minThreshold=80
+# Figure images (display only): 0 to 200 counts: beads here measure about 60 to 130 counts, so at the
+# usual 0 to 4000 they would not show in fig0.
+figMin=0
+figMax=200

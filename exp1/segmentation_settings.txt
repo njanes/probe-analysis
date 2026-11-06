@@ -1,0 +1,14 @@
+# Fiji settings tuned for exp1: bead_segmentation.ijm opens with these when this folder is chosen
+# (names as in results/settings_used.txt, which records what each run used).
+# The values the first study was analysed with.
+minDiam=3.8
+maxDiam=7.0
+minCirc=0.75
+maxCentreContrast=0.2
+maxBrightSpot=0.35
+minEdgeSharpness=0.09
+shrinkPx=5
+minThreshold=80
+# Figure images (display only): 0 to 4000 counts, as in the first study's figures.
+figMin=0
+figMax=4000
