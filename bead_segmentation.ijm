@@ -56,11 +56,13 @@ sep = File.separator;
 // (manual_beads, from edit_beads.ijm) changed since are measured again, with the settings of that run.
 usedFile = outputDir + sep + "settings_used.txt";
 update = File.exists(usedFile);
-if (update && !getBoolean("This results folder already has results.\n \n"
-		+ "Update: measure again only the images whose outlines you corrected (with edit_beads.ijm) since,\n"
-		+ "with the same settings, and update the results. The other images' results stay as they are.\n \n"
-		+ "Stop: to choose an empty folder instead.", "Update", "Stop"))
-	exit;
+if (update) {                                               // (a macro's && always works out both sides)
+	if (!getBoolean("This results folder already has results.\n \n"
+			+ "Update: measure again only the images whose outlines you corrected (with edit_beads.ijm) since,\n"
+			+ "with the same settings, and update the results. The other images' results stay as they are.\n \n"
+			+ "Stop: to choose an empty folder instead.", "Update", "Stop"))
+		exit;
+}
 
 // settings tuned for this experiment, if its folder has them (names as in settings_used.txt). An update
 // takes the settings recorded for that run over these, and doesn't show the dialog.
