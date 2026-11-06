@@ -19,5 +19,6 @@ results/
 images/
 *.oir
 manual_beads/
+not_selected/
 name_map.csv
 

@@ -305,6 +305,7 @@ probe-analysis/
 ├── HOW_TO_RUN.md           short guide for the researcher: what each script does and how to run it
 ├── bead_segmentation.ijm   Fiji macro: finds the beads and measures their fluorescence
 ├── edit_beads.ijm          Fiji macro: correct an image's bead outlines by hand (saved in the experiment's manual_beads/)
+├── select_images.py        moves the images an experiment's analysis didn't use into its not_selected/
 ├── images/                 the first study's images, renamed (name_map.csv gives the original names); copied into exp1
 ├── exp1/                   the first study, as below
 │   ├── *.oir               its images
@@ -312,6 +313,7 @@ probe-analysis/
 │   ├── settings.py         treatment names, images to leave out, images per well, detector maximum, figures
 │   ├── analyze.py          labels the files, picks the images, calculates results, runs the statistics
 │   ├── make_figures.py     makes the figures from analyze.py's tables
+│   ├── not_selected/       images the analysis didn't use, moved there by select_images.py (selection.csv says why)
 │   └── results/            macro output: bead_measurements.csv, segmentation_log.csv, qc/, rois/, figure_images/,
 │       │                   settings_used.txt
 │       └── analysis/       Python output: tables, stats_report.txt (full statistics), figures, figures.html
@@ -356,8 +358,9 @@ like the others.
 - **Position:** a number, with "b" for a second field at the same position, and optionally a note
   in brackets (`(400HV)`), which marks a separate image. `background` in place of the position (or
   as the whole name) marks a background image, which is left out. Each well uses at most
-  `MAX_IMAGES_PER_WELL` images per timepoint (3 in the first study, those with the most beads; no
-  limit in exp2 and exp3).
+  `MAX_IMAGES_PER_WELL` images per timepoint (3 in every experiment, those with the most beads).
+  `select_images.py` then moves every image not used into the experiment's `not_selected/`, with the
+  reason in `not_selected/selection.csv`, so the folder holds only the images analysed.
 - **Saved twice:** a position saved again (`_0001`, `_0002`) is checked by bead positions. If most
   beads of the later save lie within 2 µm of beads of the earlier one, it is the same field retaken
   and only the latest save is used; otherwise each save is used as a field of its own. The report

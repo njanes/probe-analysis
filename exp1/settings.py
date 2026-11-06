@@ -18,7 +18,8 @@ FIGURE_NAMES = {"Buffer only": "Annexin-V"}
 EXCLUDE = {}
 
 # Each well keeps at most this many images per timepoint: those with the most beads (beads are found
-# in transmitted light, so the choice never depends on fluorescence). None = every image.
+# in transmitted light, so the choice never depends on fluorescence). select_images.py then moves the rest out of
+# the folder. None = every image.
 MAX_IMAGES_PER_WELL = 3
 
 SATURATION = 4095                  # detector maximum (12-bit); a bead with any pixel at it is saturated

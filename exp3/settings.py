@@ -29,7 +29,10 @@ RENAME = {"after_ Mgfponly_1to1000_W7_3 (400HV).oir": "after_ Mposctrl_1to1000_W
 # 360 V), so the factor is 1 / 2.2.
 SCALE = {"after_ Mgfponly_1to1000_W7_3 (400HV).oir": 0.45}
 
-MAX_IMAGES_PER_WELL = None         # no limit: every image of a well is used
+# Each well keeps at most this many images per timepoint: those with the most beads (beads are found in
+# transmitted light, so the choice never depends on fluorescence). select_images.py then moves the rest out of the
+# folder. None = every image.
+MAX_IMAGES_PER_WELL = 3
 
 SATURATION = 4095                  # detector maximum (12-bit); a bead with any pixel at it is saturated
 

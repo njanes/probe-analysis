@@ -62,6 +62,23 @@ The three steps, for one experiment at a time (exp2 here; for another, change `e
 If something had to be left out (an image whose name can't be read, a treatment with no usable beads),
 the terminal says how many warnings there were, and each one is a WARNING line in `stats_report.txt`.
 
+## Keeping only the best 3 images per well
+
+The analysis uses at most 3 images per well before treatment and 3 after: those with the most beads,
+counted in transmitted light, so the choice never depends on how bright the beads are. To keep only
+those images in the experiment's folder:
+
+1. Run the three steps above as usual.
+2. In the terminal, in the project folder, run `python select_images.py exp2`.
+
+It moves every image the analysis didn't use into a `not_selected` folder inside `exp2`, and lists each
+one with the reason in `not_selected/selection.csv`. That covers images beyond a well's best 3, the first
+save of a field saved twice, images left out in `settings.py`, background images and images with no
+beads. The results don't change. If you'd like the `results` folder to mention only the images left, run
+the three steps again with a new, empty `results` folder.
+
+Nothing is deleted: to put an image back, move it from `not_selected` into the experiment's folder.
+
 ## Where to find the results
 
 Everything is in the experiment's `results/analysis` folder:
@@ -116,7 +133,8 @@ automatic outlines, delete the image's file from the experiment's `manual_beads`
    - If you repeat a treatment, give it well numbers that treatment hasn't used before.
    - For a background image, write `background` in place of the position; it is skipped.
 2. Put the new images in the experiment's folder.
-3. Run all three steps again for that experiment, with a new, empty `results` folder.
+3. Run all three steps again for that experiment, with a new, empty `results` folder. If a well now has
+   more than 3 images at a timepoint, run `select_images.py` as above to keep its best 3.
 
 The new images are added to the results and figures automatically. A treatment word the experiment
 hasn't used before needs adding to `GROUPS` in its `settings.py`. `README.md` has the full details of

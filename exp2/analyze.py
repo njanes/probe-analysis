@@ -12,6 +12,7 @@ Run after the Fiji macro has saved its results to exp2/results:
 
 Writes to exp2/results/analysis:
   file_labels.csv            how every file name was read and which images were used (check this first)
+  images_not_used.csv        every image not used and why (unreadable names aside), for select_images.py
   bead_table.csv             every bead used, labelled
   image_summary.csv          one row per image and treatment
   well_summary.csv           one row per well and treatment (the replicate)
@@ -91,7 +92,7 @@ def display_order(name):
 # position (_0001) and a note in brackets ("(400HV)"); both are kept in the field, so every image stays distinct.
 NAME = re.compile(r"(before|after)_(.+?)_w(\d+)_(\d+)([a-z]?)(?:_(\d{4}))?(?:\((.*)\))?")
 skip = {f: "background image, not a bead field" for f in log.index if tidy(f).endswith("background")}
-skip.update(S.EXCLUDE)
+skip.update({f: why for f, why in S.EXCLUDE.items() if f in log.index})   # those in this run
 beads = beads[~beads["file"].isin(skip)]
 rows, unread = [], {}             # unread: names that can't be read, left out and listed with the reason
 for f in beads["file"].unique():
@@ -135,12 +136,15 @@ if MAX:
 files.reset_index().to_csv(OUT / "file_labels.csv", index=False)
 no_beads = {f: "no beads passed the size, shape and focus checks" for f in log.index[log["beads_kept"] == 0]}
 not_used = {**no_beads, **skip, **unread, **files.loc[files["status"] != "used", "status"]}
+pd.Series({f: why for f, why in not_used.items() if f not in unread}, name="reason", dtype=str).rename_axis(
+    "file").sort_index().to_csv(OUT / "images_not_used.csv")    # what select_images.py moves out of the folder
 say("Images not used:\n" + "\n".join(f"  {f}: {why}" for f, why in sorted(not_used.items())))
 if unread:
     warn(f"{len(unread)} file name(s) couldn't be read, so those images are left out (listed above; rename them, "
          f"or add the treatment word to GROUPS in {FOLDER / 'settings.py'})")
 if missing := sorted(set(S.EXCLUDE) - set(log.index)):
-    say("Files listed in EXCLUDE but not found (check the names): " + "; ".join(missing))
+    say("Files listed in EXCLUDE but not in this run (moved to not_selected, or check the names): "
+        + "; ".join(missing))
 if saved_twice:
     say("Positions saved more than once (same field: only the latest save is used; different field: both used):\n"
         + "\n".join(sorted(saved_twice)))
