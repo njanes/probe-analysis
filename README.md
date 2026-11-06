@@ -382,7 +382,9 @@ light (including the halo), circularity of that outline at least 0.75, not touch
 threshold by Otsu's method, never below 80. Out of focus (left out) if, on the transmitted-light
 image, the bead's centre differs from the local light level by more than 20% (centre contrast), its
 brightest central spot is more than 35% above it (bright spot), or its edge sharpness is below 0.09.
-Outlines shrunk by 5 pixels to match the fluorescent ring; ring width 5 pixels; background measured
+Each outline kept is replaced by the circle that fits it best (least squares, fitted again to the outline
+points within 8, 6, 4 and 2 pixels of the last circle, so a side clipped off or a speck stuck on doesn't
+pull it), then shrunk by 5 pixels to match the fluorescent ring; ring width 5 pixels; background measured
 in a 10-pixel band starting 4 pixels outside the outline, excluding pixels near other objects.
 Saturated = any pixel at 4095 (12-bit maximum).
 

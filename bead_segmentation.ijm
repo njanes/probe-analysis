@@ -21,6 +21,7 @@
 //      are in focus in the transmitted-light image: beads above or below the focal
 //      plane have a bright (or dark) centre, and smeared blurs have soft edges. In a
 //      confocal image those beads look dim whether or not probe is bound, so they are left out.
+//      The beads are round, so each one's outline is then replaced by the circle that fits it best.
 //      If edit_beads.ijm saved corrected outlines for the image (manual_beads folder inside
 //      the image folder), it uses those instead, with no size, shape or focus checks.
 //   3. Measures every bead in the probe channel in EVERY time frame, using the
@@ -397,6 +398,22 @@ for (f = 0; f < files.length; f++) {
 		print("  " + nBeads + " beads from the corrected outlines in manual_beads");
 	} else print("  " + nBeads + " beads kept of " + nObjects + " objects (" + nBlurry + " out of focus)");
 
+	// the beads are round: replace each outline kept by the circle that fits it best, so a side clipped off
+	// or a speck stuck on doesn't change what is measured. This comes after the focus checks, whose limits
+	// were set on the outlines as found. Corrected outlines are kept as drawn.
+	if (!manual) {
+		selectImage("allObjects");
+		setColor(255);
+		for (i = 0; i < nBeads; i++) {
+			c = fitCircle(i, maxOf(1, 2 * pf));
+			roiManager("select", i);
+			makeCircle(c[0], c[1], c[2]);
+			roiManager("update");
+			fill();                                             // all of it counts as object: kept out of backgrounds
+		}
+		run("Select None");
+	}
+
 	// shrink each outline so it matches the bead itself, not the bright halo around it
 	if (sPx > 0) {
 		selectImage("allObjects");
@@ -612,6 +629,64 @@ function saveOutlined(title, nBeads, path) {
 	run("Flatten");
 	saveAs("PNG", path);
 	close();
+}
+
+// The circle (x, y, radius in pixels) that best fits outline i: fitted to all its points, then again to
+// those within 4, 3, 2 and 1 times tol pixels of the last circle, so points that stray from it (a side
+// clipped off, a speck stuck on) are left out. Each fit is least squares on x^2 + y^2 = a x + b y + c.
+function fitCircle(i, tol) {
+	roiManager("select", i);
+	run("Interpolate", "interval=1");                       // a point every pixel along the outline
+	getSelectionCoordinates(px, py);
+	n = px.length;
+	use = newArray(n);
+	Array.fill(use, 1);
+	steps = newArray(4, 3, 2, 1, 0);                        // 0: the last fit
+	for (s = 0; s < steps.length; s++) {
+		k = 0;
+		mx = 0;
+		my = 0;
+		for (j = 0; j < n; j++) if (use[j]) { k++; mx += px[j]; my += py[j]; }
+		mx /= k;
+		my /= k;
+		sxx = 0; syy = 0; sxy = 0; sxz = 0; syz = 0; sz = 0;
+		for (j = 0; j < n; j++) if (use[j]) {
+			x = px[j] - mx;
+			y = py[j] - my;
+			z = x * x + y * y;
+			sxx += x * x; syy += y * y; sxy += x * y; sxz += x * z; syz += y * z; sz += z;
+		}
+		det = sxx * syy - sxy * sxy;
+		a = (sxz * syy - syz * sxy) / det;
+		b = (syz * sxx - sxz * sxy) / det;
+		cx = mx + a / 2;
+		cy = my + b / 2;
+		r = sqrt(sz / k + (a * a + b * b) / 4);
+		if (steps[s] == 0) break;
+		k = 0;
+		for (j = 0; j < n; j++) {
+			use[j] = 0;
+			if (abs(sqrt(pow(px[j] - cx, 2) + pow(py[j] - cy, 2)) - r) < steps[s] * tol) use[j] = 1;
+			k += use[j];
+		}
+		if (k < 10) break;                                  // too few points left: keep this circle
+	}
+	run("Select None");
+	return newArray(cx, cy, r);
+}
+
+// Select a circle as a polygon with a corner about every pixel. Unlike an oval selection, it holds the
+// same pixels as a found outline of that size and shrinks the same way, so the rings measured sit where
+// the shrink setting puts them.
+function makeCircle(x, y, r) {
+	n = maxOf(32, round(2 * PI * r));
+	xs = newArray(n);
+	ys = newArray(n);
+	for (k = 0; k < n; k++) {
+		xs[k] = x + r * cos(2 * PI * k / n);
+		ys[k] = y + r * sin(2 * PI * k / n);
+	}
+	makeSelection("polygon", xs, ys);
 }
 
 // Edge sharpness of ROI i: mean Sobel gradient over the bead plus a rim of eW pixels, divided by 8
