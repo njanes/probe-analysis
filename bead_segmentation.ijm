@@ -16,6 +16,8 @@
 //      are in focus in the transmitted-light image: beads above or below the focal
 //      plane have a bright (or dark) centre, and smeared blurs have soft edges. In a
 //      confocal image those beads look dim whether or not probe is bound, so they are left out.
+//      If edit_beads.ijm saved corrected outlines for the image (manual_beads folder inside
+//      the image folder), it uses those instead, with no size, shape or focus checks.
 //   3. Measures every bead in the probe channel in EVERY time frame, using the
 //      same outlines: whole-bead mean, edge-ring mean, and the local background
 //      around the bead (mean, SD, pixel count), keeping clear of all other objects.
@@ -246,10 +248,25 @@ for (f = 0; f < files.length; f++) {
 	run("Clear Results");
 
 	// ---- STEP B: keep objects that look like single beads ------------------
+	// (or, if edit_beads.ijm saved corrected outlines for this image, use those instead)
 	roiManager("reset");
 	selectImage("allObjects");
-	run("Analyze Particles...", "size=" + minAreaPx + "-" + maxAreaPx
-		+ " pixel circularity=" + minCirc + "-1.00 show=Nothing exclude add");
+	manualZip = inputDir + sep + "manual_beads" + sep + base + "_RoiSet.zip";
+	manual = File.exists(manualZip);
+	if (manual) {
+		roiManager("open", manualZip);
+		setColor(255);
+		for (i = 0; i < roiManager("count"); i++) {
+			roiManager("select", i);
+			run("Enlarge...", "enlarge=" + sPx + " pixel");    // back to halo size, like the outlines found here
+			roiManager("update");
+			fill();                                            // count it as an object: kept out of backgrounds
+		}
+		run("Select None");
+	} else {
+		run("Analyze Particles...", "size=" + minAreaPx + "-" + maxAreaPx
+			+ " pixel circularity=" + minCirc + "-1.00 show=Nothing exclude add");
+	}
 	nCand = roiManager("count");
 
 	// objects of the wrong size or shape, for the orange outlines in the QC images
@@ -306,6 +323,7 @@ for (f = 0; f < files.length; f++) {
 	for (i = nCand - 1; i >= 0; i--) {
 		blurred = (minSharp > 0 && sharp[i] < minSharp) || (maxCC > 0 && abs(cc[i]) > maxCC)
 			|| (maxSpot > 0 && spot[i] > maxSpot);
+		if (manual) blurred = false;                           // outlines checked by eye are all kept
 		if (blurred) {
 			selectImage("blurry");
 			roiManager("select", i);
@@ -324,7 +342,11 @@ for (f = 0; f < files.length; f++) {
 	selectImage("blurry");
 	run("Select None");
 	nBeads = roiManager("count");
-	print("  " + nBeads + " beads kept of " + nObjects + " objects (" + nBlurry + " out of focus)");
+	status = "ok";
+	if (manual) {
+		status = "ok (outlines from manual_beads)";
+		print("  " + nBeads + " beads from the corrected outlines in manual_beads");
+	} else print("  " + nBeads + " beads kept of " + nObjects + " objects (" + nBlurry + " out of focus)");
 
 	// shrink each outline so it matches the bead itself, not the bright halo around it
 	if (sPx > 0) {
@@ -413,7 +435,7 @@ for (f = 0; f < files.length; f++) {
 		}
 	}
 
-	logCsv = logCsv + name + ",ok," + dims + "," + d2s(pixelUm, 4) + "," + d2s(radiusPx, 1) + ","
+	logCsv = logCsv + name + "," + status + "," + dims + "," + d2s(pixelUm, 4) + "," + d2s(radiusPx, 1) + ","
 		+ nObjects + "," + nBeads + "," + d2s(lower, 2) + "," + nBlurry + "\n";
 	run("Close All");
 	roiManager("reset");

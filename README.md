@@ -313,6 +313,7 @@ at 0:
 probe-analysis/
 ├── HOW_TO_RUN.md           short guide for the researcher: what each script does and how to run it
 ├── bead_segmentation.ijm   Fiji macro: finds the beads and measures their fluorescence
+├── edit_beads.ijm          Fiji macro: correct an image's bead outlines by hand (saved in images/manual_beads/)
 ├── settings.py             treatment names, images to leave out, images per well, detector maximum, figures
 ├── analyze.py              labels the files, picks the images, calculates results, runs the statistics
 ├── make_figures.py         makes the figures from analyze.py's tables
@@ -330,6 +331,9 @@ packages in `requirements.txt`.
 
 1. Run `bead_segmentation.ijm` in Fiji on `images`, saving to `results`, with the default settings
    (recorded in `results/settings_used.txt`).
+   - Optional: to correct an image's outlines by hand, run `edit_beads.ijm`, then step 1 again into an
+     empty `results`. Corrected outlines are saved in `images/manual_beads/` and measured as drawn, with no
+     size, shape or focus checks (`HOW_TO_RUN.md` has the steps).
 2. From the project folder: `python3 analyze.py`, then `python3 make_figures.py`.
 
 A study in its own folder (such as `study2`) has its own `settings.py`, `images` and `results`; name the

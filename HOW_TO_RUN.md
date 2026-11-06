@@ -58,6 +58,30 @@ To check that the beads were found correctly, look at the images in `results/qc`
 measured are outlined in cyan, out-of-focus beads (left out) in magenta, and other rejected objects
 in orange.
 
+## Correcting the bead outlines by hand
+
+If a QC image shows an outline on something that isn't a good bead, or a good bead that was missed,
+you can correct that image's outlines:
+
+1. In Fiji: File > Open..., choose `edit_beads.ijm`, then press Run. It asks for two folders: choose
+   `images` first, then the `results` folder of the run you checked.
+2. Pick an image. It opens with its outlines numbered, listed in the ROI Manager window.
+   - To remove an outline: click its number on the image, then click Delete in the ROI Manager.
+   - To add a missed bead: zoom in with the + key, drag a circle around the bead with the oval tool
+     (hold Shift for a perfect circle) and press T. Draw it on the bead's dark edge, like the other
+     outlines, not around the bright halo outside it.
+   - The C slider under the image switches between transmitted light and fluorescence.
+3. Click OK in the "Correct bead outlines" window. Your outlines are saved in a `manual_beads` folder
+   inside `images`, and it offers the next image.
+4. When you've corrected every image you want to, run all three steps again with a new, empty
+   `results` folder. For each corrected image, the macro measures your outlines instead of finding
+   its own, with no size, shape or focus checks. `segmentation_log.csv` marks those images "outlines
+   from manual_beads".
+
+Running `edit_beads.ijm` on an image again starts from your corrected outlines. To go back to the
+automatic outlines, delete the image's file from `images/manual_beads`. It works the same way in the
+`study2` and `study3` folders.
+
 ## Adding new images
 
 1. Name each image the same way as the others: before or after, the treatment, the well and the
