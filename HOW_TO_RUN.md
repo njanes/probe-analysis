@@ -109,14 +109,21 @@ you can correct that image's outlines:
 
 1. In Fiji: File > Open..., choose `edit_beads.ijm`, then press Run. It asks for two folders: choose
    the experiment's folder (such as `exp2`) first, then its `results` folder.
-2. Pick an image. It opens with its outlines numbered, listed in the ROI Manager window.
+2. Pick an image. It opens with every outline shown and numbered, and a window that sums up what to do.
+   - The colours: cyan for the outlines already there when the image opened (found by
+     `bead_segmentation.ijm`, or saved by you before), green for the outlines you add now, and yellow
+     for the outline selected. A circle you've drawn is yellow until you press T.
    - To remove an outline: click its number on the image, then click Delete in the ROI Manager.
    - To add a missed bead: zoom in with the + key, drag a circle around the bead with the oval tool
-     (hold Shift for a perfect circle) and press T. Draw it on the bead's dark edge, like the other
-     outlines, not around the bright halo outside it.
+     and press T; it turns green. Draw it on the bead's dark edge, like the other outlines, not around
+     the bright halo outside it.
+   - Each T adds one bead. An outline with more than one region, one on a bead that already has an
+     outline, or one too small or too big to be a bead isn't added, and a message says why.
    - The C slider under the image switches between transmitted light and fluorescence.
-3. Click OK in the "Correct bead outlines" window. Your outlines are saved in a `manual_beads` folder
-   inside the experiment's folder, and it offers the next image.
+3. Each change is saved as you make it, in a `manual_beads` folder inside the experiment's folder.
+   When you're done with the image, close it, and the macro offers the next image.
+   - If outlines you add stop turning green, the macro has stopped (pressing Esc on the image can do
+     that). What you did until then is saved: close the image and run the macro again to carry on.
 4. When you've corrected every image you want to, run all three steps again with a new, empty
    `results` folder. For each corrected image, the macro measures your outlines instead of finding
    its own, with no size, shape or focus checks. `segmentation_log.csv` marks those images "outlines
