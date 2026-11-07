@@ -110,21 +110,31 @@ you can correct that image's outlines:
 
 1. In Fiji: File > Open..., choose `edit_beads.ijm`, then press Run. It asks for two folders: choose
    the experiment's folder (such as `exp2`) first, then its `results` folder.
-2. Pick an image. It opens with every outline shown and numbered, and a window that sums up what to do.
+2. Pick the image to start with. It opens with every outline shown and numbered, and a window that
+   sums up what to do.
    - The colours: cyan for the outlines already there when the image opened (found by
      `bead_segmentation.ijm`, or saved by you before), green for the outlines you add now, and yellow
      for the outline selected. A circle you've drawn is yellow until you press T.
-   - To remove an outline: click its number on the image, then click Delete in the ROI Manager.
+   - To remove an outline: click its number on the image, then press D (or click Delete in the ROI
+     Manager).
    - To add a missed bead: zoom in with the + key, drag a circle around the bead with the oval tool
      and press T; it turns green. Draw it on the bead's dark edge, like the other outlines, not around
      the bright halo outside it.
    - Each T adds one bead. An outline with more than one region, one on a bead that already has an
      outline, or one too small or too big to be a bead isn't added, and a message says why.
-   - The C slider under the image switches between transmitted light and fluorescence.
-3. Each change is saved as you make it, in a `manual_beads` folder inside the experiment's folder.
-   When you're done with the image, close it, and the macro offers the next image.
-   - If outlines you add stop turning green, the macro has stopped (pressing Esc on the image can do
-     that). What you did until then is saved: close the image and run the macro again to carry on.
+   - A shows or hides all the outlines, and L their numbers. The C slider under the image switches
+     between transmitted light and fluorescence.
+3. When the image is done, press N (or the green arrow on the Fiji toolbar): its outlines are saved in
+   a `manual_beads` folder inside the experiment's folder, and the next image opens. An image you
+   haven't changed isn't saved, so it keeps its automatic outlines.
+   - To undo everything you've changed on an image since it opened, press X (or the red cross on the
+     toolbar).
+   - To stop, close the image: its changes are saved too.
+   - To use other keys than N, X, A, L and D, tick "Change the hotkeys" in the first window. Your
+     keys are kept for next time.
+   - If outlines you add stop turning green, the macro has stopped, and so have its keys and buttons
+     (they say so when pressed). Changes since the last Next weren't saved: close the image and run
+     the macro again.
 4. When you've corrected every image you want to, update the results:
    - Run `bead_segmentation.ijm` again and choose the same two folders as before (`exp2`, then
      `exp2/results`). It sees that the folder already has results and asks what to do: click Update.
