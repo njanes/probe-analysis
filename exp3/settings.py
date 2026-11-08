@@ -1,16 +1,22 @@
 """settings.py for exp3: facts about it, used by exp3's analyze.py and make_figures.py.
 
-exp3 is one run in which every well had media (the M in the file names): the MFG-E8 and GFP negative controls
-and the BSA-precoat positive control. Its after images of W1_3 and W9 were also taken with the
-fluorescence detector at 400 V instead of 360 V (marked 400HV); W7's only after image was taken that way.
+exp3 holds two runs. In the media run every well had media (the M in the file names): the MFG-E8 and GFP negative
+controls and the BSA-precoat positive control. Its after images of W1_3 and W9 were also taken with the
+fluorescence detector at 400 V instead of 360 V (marked 400HV); W7's only after image was taken that way. The later
+probe run has the probe at 1:1000 (W1 to W3, without media). A well is identified by its number and treatment, so
+the probe run's W1 to W3 are different wells from the media run's.
 """
 
 # Treatment word in the file names -> treatment name, in display order. Words are read in lower case without spaces.
 GROUPS = {
-    "mnegvectrl_1to1000": "Negative control (MFG-E8)",     # W1 to W3
-    "mgfponly_1to1000": "Negative control (GFP)",          # W4 to W6
-    "mposctrl_1to1000": "Positive control (BSA precoat)",  # W7 to W9
+    "mnegvectrl_1to1000": "Negative control (MFG-E8)",     # media run, W1 to W3
+    "mgfponly_1to1000": "Negative control (GFP)",          # media run, W4 to W6
+    "mposctrl_1to1000": "Positive control (BSA precoat)",  # media run, W7 to W9
+    "1to1000": "Probe 1:1000",                             # probe run, W1 to W3
 }
+
+# Treatment names shown differently in the figures
+FIGURE_NAMES = {}
 
 # Images in the folder that should not be analysed, and why ({"file name": "reason"})
 EXCLUDE = {name: "400HV retake of a field also imaged at 360 V, which is used" for name in [
@@ -36,9 +42,24 @@ MAX_IMAGES_PER_WELL = 3
 
 SATURATION = 4095                  # detector maximum (12-bit); a bead with any pixel at it is saturated
 
-# Fig2, the before/after bar chart with a dot per well: its treatments, in order. Each is tested before vs after
-# only, as exp3 has no probe-only wells to compare the others with.
-BEFORE_AFTER = ["Negative control (MFG-E8)", "Negative control (GFP)", "Positive control (BSA precoat)"]
+# Other experiments whose wells the before/after charts use: folder -> words added to its treatment names here
+OTHER_STUDIES = {}
+
+# Before/after bar charts with a dot per well: chart name -> {bar: the treatments whose wells the bar holds}. Fig6
+# shows the media run beside the probe run's 1:1000, fig6b the media run alone and fig7 the probe run alone.
+MEDIA_RUN = {
+    "Negative control (MFG-E8)": ["Negative control (MFG-E8)"],
+    "Negative control (GFP)": ["Negative control (GFP)"],
+    "Positive control (BSA precoat)": ["Positive control (BSA precoat)"],
+}
+BEFORE_AFTER = {
+    "fig6_before_after_second_run": {**MEDIA_RUN, "Probe 1:1000": ["Probe 1:1000"]},
+    "fig6b_before_after_second_run_without_probe": MEDIA_RUN,
+    "fig7_before_after_third_run": {"Probe 1:1000": ["Probe 1:1000"]},
+}
+
+# Charts whose other bars are each compared with one bar, after treatment (Dunnett's test): chart -> that bar
+COMPARE_TO = {"fig6_before_after_second_run": "Probe 1:1000"}
 
 # Treatments in the other figures: treatment names, or None for every treatment
 REPRESENTATIVE_IMAGES = None       # fig0

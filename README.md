@@ -255,31 +255,32 @@ and saturation caps the SNR of the brightest beads as well.
 ## Experiments 2 and 3 (exp2 and exp3 folders)
 
 Two further experiments, each analysed in its own folder with its own `analyze.py`, `make_figures.py` and
-`settings.py`, using only its own images. The images are used with the names they were saved under.
+`settings.py`. exp2's before/after charts also pool exp1's wells (`OTHER_STUDIES`), so exp1 is analysed
+first. The images are used with the names they were saved under.
 
-**exp2** (two runs; the fluorescence detector settings were the same in both, so their counts are comparable)
-
-| Run | Wells | Treatment | Word in the file names |
-|---|---|---|---|
-| Earlier | W1 to W3 | Negative control (MFG-E8) | `negctrlMFGE8` |
-| Earlier | W4 to W6 | Negative control (GFP) | `negctrlGFP` |
-| Earlier | W7 to W9 | Annexin-V | `annexin` |
-| Earlier | W10 | Probe 1:1000 | `1to1000` |
-| Earlier | W12 and W13 | Positive control (BSA precoat) | `posctrlBSAprecoat` |
-| Earlier | W14 and W15 | Probe 1:3333 | `1to3333` |
-| Later | W1 to W3 | Probe 1:1000 | `1to1000` |
-| Later | W4 | Probe 1:3333 (before images only, so not compared) | `1to3333` |
-
-A well is identified by its number and treatment, so the later run's W1 to W3 (1:1000) are different wells
-from the earlier run's W1 to W3 (MFG-E8). Probe 1:1000 pools W10 and the later run's W1 to W3.
-
-**exp3** (one run; every well had media, the M in the file names)
+**exp2** (one run, plus before images of a 1:3333 well from a later run)
 
 | Wells | Treatment | Word in the file names |
 |---|---|---|
-| W1 to W3 | Negative control (MFG-E8) | `Mnegvectrl_1to1000` |
-| W4 to W6 | Negative control (GFP) | `Mgfponly_1to1000` |
-| W7 to W9 | Positive control (BSA precoat) | `Mposctrl_1to1000` |
+| W1 to W3 | Negative control (MFG-E8) | `negctrlMFGE8` |
+| W4 to W6 | Negative control (GFP) | `negctrlGFP` |
+| W7 to W9 | Annexin-V | `annexin` |
+| W10 | Probe 1:1000 | `1to1000` |
+| W12 and W13 | Positive control (BSA precoat) | `posctrlBSAprecoat` |
+| W14 and W15 | Probe 1:3333 | `1to3333` |
+| W4 (later run) | Probe 1:3333 (before images only, so not compared) | `1to3333` |
+
+**exp3** (two runs: a media run, in which every well had media, the M in the file names, and a probe run)
+
+| Run | Wells | Treatment | Word in the file names |
+|---|---|---|---|
+| Media | W1 to W3 | Negative control (MFG-E8) | `Mnegvectrl_1to1000` |
+| Media | W4 to W6 | Negative control (GFP) | `Mgfponly_1to1000` |
+| Media | W7 to W9 | Positive control (BSA precoat) | `Mposctrl_1to1000` |
+| Probe | W1 to W3 | Probe 1:1000 | `1to1000` |
+
+A well is identified by its number and treatment, so the probe run's W1 to W3 are different wells from the
+media run's.
 
 - Some after images were also taken with the fluorescence detector at 400 V instead of 360 V (marked
   `(400HV)`). Those of W1_3 and W9 are retakes of fields also imaged at 360 V, which are used instead
@@ -289,14 +290,21 @@ from the earlier run's W1 to W3 (MFG-E8). Probe 1:1000 pools W10 and the later r
   voltages (`SCALE`). Its SNR and background are as recorded, and it is never shown in fig0.
 - The positive control's W8 has before images only, so it isn't compared.
 
-**Figures** (in each folder's `results/analysis`; a figure number means the same kind of figure as in exp1):
-fig0 (representative images), **fig2_before_after** (before and after bars, mean ± SD of the wells, with a
-dot for each well; an error bar stops at 0), fig3 (% positive beads) and fig4 (change per well), each for
-every treatment. In exp2's fig2 each bar is tested before vs after (paired t-test), and every other
-treatment's after-treatment fluorescence is compared with the probe at 1:1000 (Dunnett's test, which
-corrects for comparing several treatments with one); 1:1000 is the last bar, so it can be cropped off.
-exp3 has no probe-only wells, so its fig2 tests each bar before vs after only. There is no fig1 and no
-Tests 1 to 3 in either: they need probe dilutions and buffer or negative controls at the same dilution.
+**Figures** (in each folder's `results/analysis`): fig0 (representative images), fig3 (% positive beads)
+and fig4 (change per well), each for every treatment, and before/after charts: bars of mean ± SD of the
+wells before and after, with a dot for each well (an error bar stops at 0). In each chart every bar is
+tested before vs after (paired t-test), and the after-treatment fluorescence of bars is compared as below.
+
+| Chart | Bars | Compared after treatment |
+|---|---|---|
+| exp2 `fig2_before_after` | Annexin-V (exp1's buffer-only wells and exp2's annexin-V), negative control 1:3333 (exp1), probe 1:3333 (exp1 and exp2) | the probe vs the negative control at 1:3333 (Welch's t-test) |
+| exp2 `fig5_before_after_first_run` | exp2's controls, and 1:1000 (exp1's 1:1000 wells and W10) | each bar vs 1:1000 (Dunnett's test) |
+| exp3 `fig6_before_after_second_run` | the media run and the probe run's 1:1000 | each bar vs 1:1000 (Dunnett's test) |
+| exp3 `fig6b_before_after_second_run_without_probe` | the media run | none |
+| exp3 `fig7_before_after_third_run` | the probe run's 1:1000 | none |
+
+Dunnett's test corrects for comparing several bars with one. There is no fig1 and no Tests 1 to 3 in
+either: they need probe dilutions and buffer or negative controls at the same dilution.
 
 ## Files and re-running
 
@@ -371,10 +379,11 @@ like the others.
   dilution ("Probe 1:N") with "Buffer only", Test 2 each "Negative control 1:N" with the probe at the
   same dilution, and Test 3 runs over every probe well (at least 3 dilutions). The fig1 curve needs at
   least 4 probe dilutions.
-- `BEFORE_AFTER` in `settings.py` lists fig2's treatments, in order (in exp2, `COMPARE_TO` names the
-  one the others are compared with). `REPRESENTATIVE_IMAGES`, `POSITIVE_BEADS` and `CHANGE_PER_WELL`
-  choose the treatments in figs 0, 3 and 4 (`None` = all). In exp1, `FIGURE_NAMES` relabels a treatment
-  in the figures.
+- `BEFORE_AFTER` in `settings.py` lists the before/after bars, in order: in exp1, fig2's treatments; in
+  exp2 and exp3, each chart's bars and the treatments each bar pools (another experiment's with its
+  folder name added, such as "Probe 1:1000, exp1"), with `COMPARE_TO` naming the bar the others are
+  compared with. `REPRESENTATIVE_IMAGES`, `POSITIVE_BEADS` and `CHANGE_PER_WELL` choose the treatments in
+  figs 0, 3 and 4 (`None` = all). `FIGURE_NAMES` relabels a treatment in the figures.
 - To leave out an image for another reason, add it to `EXCLUDE` in `settings.py` with the reason.
 
 **Measurement settings** (1 pixel = 0.104 µm): beads kept if 3.8 to 7 µm across in transmitted
@@ -389,9 +398,9 @@ in a 10-pixel band starting 4 pixels outside the outline, excluding pixels near 
 Saturated = any pixel at 4095 (12-bit maximum).
 
 These are exp1's values. Each experiment's folder has its own, in `segmentation_settings.txt`, which the
-macro loads: exp2's threshold is never below 150, because its later run's transmitted light was taken at
-a higher detector voltage (mostly 530 to 570 V, against 310 to 400 V) and is grainier, so at 80 the grain
-was outlined instead of the beads (16 of its 24 images found no bead; at 150 all find beads, while the
-earlier run keeps 207 of its 221). exp3 uses exp1's values, which find the most beads in its images. The
-figure images (display only) span 0 to 4000 counts in exp1, 0 to 1000 in exp2 and 0 to 200 in exp3, so
-each experiment's beads show in fig0.
+macro loads: exp3's threshold is never below 150, because its probe run's transmitted light was taken at
+a higher detector voltage (mostly 530 to 570 V) and is grainy, so at 80 the grain was outlined instead of
+the beads (most of its images found no bead; at 150 all find beads, while the media run keeps 196 of its
+206). exp2 uses exp1's values, which find the most beads in its images. The figure images (display only)
+span 0 to 4000 counts in exp1, 0 to 2000 in exp2 and 0 to 200 in exp3, so each experiment's beads show in
+fig0.

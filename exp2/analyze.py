@@ -1,8 +1,9 @@
 """
-analyze.py for exp2 (an earlier run with controls, annexin-V and the probe at 1:3333 and 1:1000, and a later run
-with more 1:1000 wells): turns the Fiji macro's bead measurements into per-well before/after results and
-statistics. Images are labelled from their file names (convention in README.md), so new images are included
-without changing the code. Settings are in settings.py next to this file; figures are drawn by make_figures.py.
+analyze.py for exp2 (controls, annexin-V and the probe at 1:3333 and 1:1000): turns the Fiji macro's bead
+measurements into per-well before/after results and statistics. Images are labelled from their file names
+(convention in README.md), so new images are included without changing the code. Settings are in settings.py next
+to this file; figures are drawn by make_figures.py. Its before/after charts also use exp1's wells, so exp1 is
+analysed first.
 
 Each well's after-treatment beads are compared with the same well's before-treatment beads. The
 two timepoints show different fields of view, so bead populations are compared, not individual beads.
@@ -18,8 +19,8 @@ Writes to exp2/results/analysis:
   well_summary.csv           one row per well and treatment (the replicate)
   treatment_summary.csv      mean, SD and 95% CI per treatment
   representative_images.csv  typical before/after image per treatment, for fig0
-  before_after_wells.csv     the wells in each bar of the before/after chart (fig2)
-  figure_tests.csv           the comparisons marked on fig2
+  before_after_wells.csv     the wells in each bar of the before/after charts (settings.BEFORE_AFTER)
+  figure_tests.csv           the comparisons marked on the before/after charts
   stats_report.txt           the printed report, including the tests
 """
 import itertools
@@ -86,6 +87,24 @@ def display_order(name):
     return list(S.GROUPS.values()).index(name)
 
 
+def at_same_dilution(neg):
+    """The probe at a negative control's dilution: 'Negative control 1:3333' -> 'Probe 1:3333'."""
+    return "Probe" + neg.removeprefix("Negative control")
+
+
+# well values of the other experiments the before/after charts use (settings.OTHER_STUDIES), each treatment name
+# with the words given there added ("Probe 1:1000, exp1")
+others = []
+for folder, words in S.OTHER_STUDIES.items():
+    path = FOLDER.parent / folder / "results" / "analysis" / "well_summary.csv"
+    if not path.exists():
+        warn(f"{path} not found, so the charts leave out {folder}'s wells: run python {folder}/analyze.py first, "
+             f"then this one again")
+        continue
+    other = pd.read_csv(path)[["treatment", "well_name", "F_before", "F_after"]]
+    others.append(other.assign(treatment=other["treatment"] + ", " + words))
+
+
 # ---- 1. read the file names and choose the images ------------------------------------------------
 # after_annexin_W7_2 = after treatment, annexin-V, well 7, position 2; a second field at that position ends in
 # b (W7_2b). A well is identified by its number and treatment. A name may end with a repeat save of the
@@ -96,7 +115,7 @@ skip.update({f: why for f, why in S.EXCLUDE.items() if f in log.index})   # thos
 beads = beads[~beads["file"].isin(skip)]
 rows, unread = [], {}             # unread: names that can't be read, left out and listed with the reason
 for f in beads["file"].unique():
-    m = NAME.fullmatch(tidy(f))
+    m = NAME.fullmatch(tidy(S.RENAME.get(f, f)))           # a file saved under the wrong treatment: its right name
     if not m:
         unread[f] = "name not read as before/after_treatment_W(well)_(position)"
         continue
@@ -148,6 +167,12 @@ if missing := sorted(set(S.EXCLUDE) - set(log.index)):
 if saved_twice:
     say("Positions saved more than once (same field: only the latest save is used; different field: both used):\n"
         + "\n".join(sorted(saved_twice)))
+if S.RENAME:
+    say("Files read under another name (RENAME in settings.py):\n" + "\n".join(f"  {f}: as {new}" for f, new in
+                                                                                S.RENAME.items()))
+if S.SCALE:
+    say("Bead signal scaled to the others' detector voltage (SCALE in settings.py):\n"
+        + "\n".join(f"  {f}: x {factor:.3f}" for f, factor in S.SCALE.items()))
 
 used = files[files["status"] == "used"].copy()
 used["well_name"] = "W" + used["well"].astype(str)
@@ -172,6 +197,9 @@ beads = beads.merge(used[["timepoint", "treatment", "well", "well_name", "positi
                     .reset_index(), on="file")
 beads["F"] = beads["ring_mean"] - beads["bg_mean"]           # counts above local background
 beads["SNR"] = beads["F"] / beads["bg_sd"]
+# signal taken at another detector voltage, scaled to the rest (settings.SCALE); SNR, background and saturation are
+# as recorded
+beads["F"] *= beads["file"].map(S.SCALE).fillna(1)
 beads["saturated"] = beads["disc_max"] >= S.SATURATION
 # a positive bead is brighter than nearly all untreated beads: above the mean + 3 SD of the before-treatment beads
 before = beads[beads["timepoint"] == "before"]
@@ -222,7 +250,7 @@ say(summary[["treatment", "n_wells", "F_before_mean", "F_after_mean", "dF_mean",
 
 # ---- 5. change in each treatment --------------------------------------------------------------------------
 # The well is the replicate; outcome = each well's change in bead fluorescence (dF). The tests are those marked on
-# fig2 (section 6).
+# the before/after charts (section 6).
 say("\nStatistics: well values (the replicate); outcome = each well's change from its own before images.")
 say("\n=== Bead fluorescence (change in counts above background) ===")
 say("Change from before to after in each treatment (mean of the wells with 95% CI; a description, not a test)")
@@ -232,54 +260,94 @@ for r in summary.itertuples():
         f"(95% CI {r.dF_ci95_low:.1f} to {r.dF_ci95_high:.1f}; SD {r.dF_sd:.1f}; n = {r.n_wells} wells)"
         if r.n_wells > 1 else "(1 well, so no SD or CI)"))
 
-# ---- 6. fig2 (before/after): the comparisons marked on it ---------------------------------------------------
-# Each comparison needs at least 2 wells per treatment: each treatment before vs after (paired t-test on its wells),
-# and every other treatment's after-treatment fluorescence vs settings.COMPARE_TO's (Dunnett's test, which
-# corrects for comparing several treatments with one)
-in_bar, rows = {}, []             # in_bar: fig2 bar (a treatment) -> its wells; a treatment without wells is left out
-for t in S.BEFORE_AFTER:
-    if not (wells["treatment"] == t).any():
-        warn(f"fig2: the '{t}' bar is left out: no wells compared")
-        continue
-    in_bar[t] = w = wells[wells["treatment"] == t]
-    if len(w) >= 2:
-        rows.append(["fig2", "paired t-test, before vs after", t, t, w["dF"].mean(),
-                     stats.ttest_rel(w["F_after"], w["F_before"]).pvalue])
-ref = S.COMPARE_TO
-compared = [t for t in in_bar if t != ref and len(in_bar[t]) >= 2]
-if ref in in_bar and len(in_bar[ref]) >= 2 and compared:
-    test = stats.dunnett(*[in_bar[t]["F_after"] for t in compared], control=in_bar[ref]["F_after"], random_state=0)
-    rows += [["fig2", "Dunnett's test, after vs after", ref, t, in_bar[t]["F_after"].mean()
-              - in_bar[ref]["F_after"].mean(), p] for t, p in zip(compared, test.pvalue)]
-columns = ["treatment", "well_name", "F_before", "F_after", "dF"]
-(pd.concat(in_bar.values())[columns] if in_bar else pd.DataFrame(columns=columns)).to_csv(
-    OUT / "before_after_wells.csv", index=False)
+# ---- 6. before/after charts (settings.BEFORE_AFTER): the comparisons marked on them -----------------------------
+# A bar pools the wells of the treatments listed for it, which can include another experiment's
+# (settings.OTHER_STUDIES). Each comparison needs at least 2 wells per bar: each bar before vs after (paired t-test
+# on its wells), the probe's after-treatment fluorescence vs the negative control's at the same dilution (Welch's
+# t-test), and, in a chart listed in settings.COMPARE_TO, every other bar's after-treatment fluorescence vs that
+# bar's (Dunnett's test, which corrects for comparing several bars with one)
+pool = pd.concat([wells.astype({"treatment": str}), *others])
+pool["dF"] = pool["F_after"] - pool["F_before"]
+bars, rows, held = [], [], {}     # held: chart -> {bar: its wells}, bars without wells left out
+for fig, figure_bars in S.BEFORE_AFTER.items():
+    tag = fig.split("_")[0]                                       # "fig5", as in figure_tests.csv
+    in_bar = held[fig] = {}
+    for bar, names in figure_bars.items():
+        missing = [name for name in names if name not in set(pool["treatment"])]
+        if missing == names:
+            warn(f"{fig}: the '{bar}' bar is left out: no wells compared for {'; '.join(names)}")
+            continue
+        if missing:
+            warn(f"{fig}: the '{bar}' bar has no wells from {'; '.join(missing)}")
+        in_bar[bar] = w = pool[pool["treatment"].isin(names)]
+        bars.append(w.assign(figure=fig, bar=bar))
+        if len(w) >= 2:
+            rows.append([tag, "paired t-test, before vs after", bar, bar, w["dF"].mean(),
+                         stats.ttest_rel(w["F_after"], w["F_before"]).pvalue])
+    for neg in in_bar:
+        probe = at_same_dilution(neg)
+        if neg.startswith("Negative control 1:") and probe in in_bar and min(len(in_bar[neg]), len(in_bar[probe])) >= 2:
+            a, b = in_bar[neg]["F_after"], in_bar[probe]["F_after"]
+            rows.append([tag, "Welch t-test, after vs after", neg, probe, b.mean() - a.mean(),
+                         stats.ttest_ind(b, a, equal_var=False).pvalue])
+    ref = S.COMPARE_TO.get(fig)                                   # every other bar vs this one, after treatment
+    if ref and ref not in in_bar:
+        warn(f"{fig}: no comparisons with '{ref}', which " + ("has no wells" if ref in figure_bars else
+                                                             "is not one of its bars (COMPARE_TO in settings.py)"))
+    elif ref:
+        compared = [bar for bar in in_bar if bar != ref and len(in_bar[bar]) >= 2]
+        if len(in_bar[ref]) >= 2 and compared:
+            test = stats.dunnett(*[in_bar[bar]["F_after"] for bar in compared], control=in_bar[ref]["F_after"],
+                                 random_state=0)
+            rows += [[tag, "Dunnett's test, after vs after", ref, bar, in_bar[bar]["F_after"].mean()
+                      - in_bar[ref]["F_after"].mean(), p] for bar, p in zip(compared, test.pvalue)]
+columns = ["figure", "bar", "treatment", "well_name", "F_before", "F_after", "dF"]
+(pd.concat(bars)[columns] if bars else pd.DataFrame(columns=columns)).to_csv(OUT / "before_after_wells.csv",
+                                                                             index=False)
 tests = pd.DataFrame(rows, columns=["figure", "test", "a", "b", "difference", "p"])
 tests.to_csv(OUT / "figure_tests.csv", index=False)
-say("\n=== Comparisons marked on fig2 ===")
-say("Each treatment before vs after (paired t-test on its wells; change in counts)")
-for t in S.BEFORE_AFTER:
-    r = tests[tests["test"].str.startswith("paired") & (tests["a"] == t)]
-    say(f"  {t:{WIDTH}s} " + (f"{r.difference.iloc[0]:+8.1f} counts, p = {fmt_p(r.p.iloc[0])}" if len(r) else
-                              "not tested: 1 well" if t in in_bar else "left out: no wells"))
-dunnett = tests[tests["test"].str.startswith("Dunnett")]
-if len(dunnett):
-    say(f"After treatment, each treatment vs {ref} (Dunnett's test, corrected for {len(dunnett)} comparisons)")
-    for r in dunnett.itertuples():
+
+say("\n=== Comparisons marked on the before/after charts ===")
+for fig, figure_bars in S.BEFORE_AFTER.items():
+    tag, width, in_bar = fig.split("_")[0], max([WIDTH, *map(len, figure_bars)]), held[fig]
+    shown = tests[tests["figure"] == tag]
+    say(f"Figure {tag[3:]}: each bar before vs after (paired t-test on its wells; change in counts)")
+    for bar, names in figure_bars.items():                       # what each bar holds, if not just its own name
+        if names != [bar] and bar in in_bar:
+            k = {name: int((pool["treatment"] == name).sum()) for name in names}
+            say(f"  {bar} holds " + "; ".join(f"{name} ({n_w} well{'s' * (n_w != 1)})" for name, n_w in k.items()))
+    for bar in figure_bars:
+        r = shown[shown["test"].str.startswith("paired") & (shown["a"] == bar)]
+        say(f"  {bar:{width}s} " + (f"{r.difference.iloc[0]:+8.1f} counts, p = {fmt_p(r.p.iloc[0])}" if len(r) else
+                                   "not tested: 1 well" if bar in in_bar else "left out: no wells"))
+    welch = shown[shown["test"].str.startswith("Welch")]
+    if len(welch):
+        say(f"Figure {tag[3:]}: after treatment, the probe vs the negative control at the same dilution "
+            f"(Welch's t-test)")
+    for r in welch.itertuples():
         say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
-    for t in in_bar:
-        if t != ref and len(in_bar[t]) < 2:
-            say(f"  {t} vs {ref}: not tested: 1 well")
-else:
-    say(f"No comparisons with {ref}: they need at least 2 wells in it and in another treatment.")
+    ref = S.COMPARE_TO.get(fig)
+    if ref in in_bar:
+        dunnett = shown[shown["test"].str.startswith("Dunnett")]
+        say(f"Figure {tag[3:]}: after treatment, each bar vs {ref} (Dunnett's test, corrected for "
+            f"{len(dunnett)} comparison{'s' * (len(dunnett) != 1)})" if len(dunnett) else
+            f"Figure {tag[3:]}: no comparisons with {ref}; they need at least 2 wells in it and in another bar")
+        for r in dunnett.itertuples():
+            say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
+        for bar in in_bar:
+            if len(dunnett) and bar != ref and len(in_bar[bar]) < 2:
+                say(f"  {bar} vs {ref}: not tested: 1 well")
 
 # ---- 7. representative images, chosen by rule: the typical well, then its typical image -------------------
-reps = []
+# A scaled image (settings.SCALE) is never shown: its figure image is as recorded, so it would look too bright
+reps, shown = [], img[~img["file"].isin(S.SCALE)]
+both_shown = shown.groupby(["treatment", "well_name"])["timepoint"].nunique() == 2
 for t in ORDER:
-    w = wells[wells["treatment"] == t]
+    w = wells[(wells["treatment"] == t) & wells["well_name"].map(lambda n: both_shown.get((t, n), False))]
     i = (w["dF"] - w["dF"].median()).abs().idxmin()          # well whose change is closest to the median
     for tp in ("before", "after"):
-        cand = img[(img["treatment"] == t) & (img["well_name"] == w.at[i, "well_name"]) & (img["timepoint"] == tp)]
+        cand = shown[(shown["treatment"] == t) & (shown["well_name"] == w.at[i, "well_name"])
+                     & (shown["timepoint"] == tp)]
         target = w.at[i, f"F_{tp}"]
         r = cand.loc[(cand["F"] - target).abs().idxmin()]    # image closest to the well mean
         reps.append({"treatment": t, "timepoint": tp, "well": r["well_name"], "position": r["image"].split(".")[1],

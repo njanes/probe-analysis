@@ -6,7 +6,7 @@ The analysis is split into three experiments, each in its own folder:
 |---|---|---|
 | `exp1` | the first study | `buffer`, `negctrl-1to3333`, `probe-1to…` |
 | `exp2` | MFG-E8, GFP, annexin-V, BSA precoat and the probe at 1:3333 and 1:1000 | `negctrlMFGE8`, `negctrlGFP`, `annexin`, `posctrlBSAprecoat`, `1to3333`, `1to1000` |
-| `exp3` | the media run (M = media in every well): MFG-E8, GFP and BSA precoat | `Mnegvectrl_1to1000`, `Mgfponly_1to1000`, `Mposctrl_1to1000` |
+| `exp3` | the media run (M = media in every well): MFG-E8, GFP and BSA precoat; and the probe run at 1:1000 | `Mnegvectrl_1to1000`, `Mgfponly_1to1000`, `Mposctrl_1to1000`, `1to1000` |
 
 Each folder holds that experiment's images (the .oir files, straight in the folder) and everything made
 for it alone:
@@ -46,7 +46,9 @@ On a Mac, type `python3` instead of `python` here and below.
 
 ## Running it
 
-The three steps, for one experiment at a time (exp2 here; for another, change `exp2` to its folder):
+The three steps, for one experiment at a time (exp2 here; for another, change `exp2` to its folder). exp2's
+figures also use exp1's results, so analyse exp1 first. If exp1's results change, run steps 2 and 3 again for
+exp2.
 
 1. **Fiji macro**
    - Make a new, empty folder called `results` inside `exp2`. If there is already a `results` folder,
@@ -92,9 +94,14 @@ Everything is in the experiment's `results/analysis` folder:
   in every experiment:
   - `fig0_representative_images`: a typical before and after image for each treatment.
   - `fig1_dilution_response` (exp1 only): the dilution-response curve.
-  - `fig2_before_after`: mean fluorescence before and after for each treatment. In exp2 and exp3 it
-    has a dot for each well. In exp2, every other treatment is compared with the probe at 1:1000; in
-    exp3, which has no probe-only wells, each treatment is tested before vs after only.
+  - Before/after charts: mean fluorescence before and after, with a dot for each well in exp2 and exp3.
+    - `fig2_before_after`: in exp1, its treatments; in exp2, annexin-V and the probe and negative
+      control at 1:3333, each bar pooling exp1's wells with exp2's.
+    - `fig5_before_after_first_run` (exp2): exp2's controls, each compared with the probe at 1:1000
+      (exp1's 1:1000 wells and exp2's W10).
+    - `fig6_before_after_second_run` (exp3): the media run, each treatment compared with the probe
+      run's 1:1000. `fig6b` has the media run alone.
+    - `fig7_before_after_third_run` (exp3): the probe run's 1:1000 alone.
   - `fig3_positive_beads`: the % of beads positive after treatment.
   - `fig4_change_per_well`: each well's change in fluorescence.
 - The .csv tables, which open in Excel.
