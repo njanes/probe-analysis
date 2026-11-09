@@ -4,13 +4,13 @@ Altair. Run after exp3's analyze.py:
   python exp3/make_figures.py
 
 Saves PNG (300 dpi) and SVG files to exp3/results/analysis:
-  fig0_representative_images   typical before/after image per treatment (green), one fixed display range, for the
-                               treatments in settings.REPRESENTATIVE_IMAGES
+  fig0_representative_images   typical before/after image per treatment (green), one fixed display range: one
+                               figure for each in settings.REPRESENTATIVE_IMAGES
   fig2_before_after, ...       mean fluorescence before and after with a dot per well: one chart for each in
                                settings.BEFORE_AFTER, each bar pooling the wells listed for it
-  fig3_positive_beads          % of beads positive after treatment, for the treatments in settings.POSITIVE_BEADS
-  fig4_change_per_well         each well's change in fluorescence (after − before), mean ± SD, for the
-                               treatments in settings.CHANGE_PER_WELL
+  fig3_positive_beads          % of beads positive after treatment: one figure for each in settings.POSITIVE_BEADS
+  fig4_change_per_well         each well's change in fluorescence (after − before), mean ± SD: one figure for
+                               each in settings.CHANGE_PER_WELL
 and figures.html, every figure on one page (images embedded, so the file opens and can be shared on its own).
 """
 import base64
@@ -191,8 +191,10 @@ def save(chart, name):
 print("Making figures:")
 
 # ---- Figure 0: representative images (chosen by rule in analyze.py), shown in green, 5 treatments a row ----
-groups = chosen(S.REPRESENTATIVE_IMAGES)
-if groups:
+for name, treatments in S.REPRESENTATIVE_IMAGES.items():
+    groups = chosen(treatments)
+    if not groups:
+        continue
     (OUT / "representative_images").mkdir(exist_ok=True)
     SIDE = 170                                         # panel size in points
     rows = []                                          # a before row and an after row for each 5 treatments
@@ -221,7 +223,7 @@ if groups:
                 panel = alt.layer(*layers).properties(width=SIDE, height=SIDE)
                 panels.append(panel.properties(title=title(x_label(t), size=9)) if tp == "before" else panel)
             rows.append(alt.hconcat(*panels, spacing=6))
-    save(alt.vconcat(*rows, spacing=6), "fig0_representative_images")
+    save(alt.vconcat(*rows, spacing=6), name)
 
 # ---- Before/after charts (settings.BEFORE_AFTER): mean fluorescence, paired bars (open = before, filled =
 # after), a dot per well. A bar pools the wells analyze.py listed for it in before_after_wells.csv. Probe bars keep
@@ -274,8 +276,10 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
     save(chart, fig)
 
 # ---- Figure 3: % of beads positive after treatment --------------------------------------------------------
-groups = chosen(S.POSITIVE_BEADS)
-if groups:
+for name, treatments in S.POSITIVE_BEADS.items():
+    groups = chosen(treatments)
+    if not groups:
+        continue
     W3, H3 = slot(groups, 90) * len(groups), 320
     positive = pd.DataFrame([{"x": i, "x0": i - 0.3, "x1": i + 0.3, "zero": 0, "fill": COLOR[t],
                               **mean_sd(wells.loc[wells["treatment"] == t, "pct_positive_after"])}
@@ -289,11 +293,13 @@ if groups:
                                                y2="zero:Q", fill=alt.Fill("fill:N", scale=None)),
         *error_bars(positive, alt.X("x:Q", scale=scale3x), Y3),
     ).properties(width=W3, height=H3)
-    save(fig3, "fig3_positive_beads")
+    save(fig3, name)
 
 # ---- Figure 4: each well's change in fluorescence, with the mean ± SD centred on the wells ------------------
-groups = chosen(S.CHANGE_PER_WELL)
-if groups:
+for name, treatments in S.CHANGE_PER_WELL.items():
+    groups = chosen(treatments)
+    if not groups:
+        continue
     W4, H4 = slot(groups, 70) * len(groups), 260
     change = wells[wells["treatment"].isin(groups)].copy()
     change["x"] = change["treatment"].map(groups.index) + change.groupby("treatment")["well_name"].transform(
@@ -309,7 +315,7 @@ if groups:
         alt.Chart(change).mark_point(**FILLED).encode(alt.X("x:Q", scale=scale4x, axis=axis4x), Y4("dF"), fill=FILL),
         *error_bars(bars4, alt.X("x:Q", scale=scale4x), Y4, mean_width=14),
     ).properties(width=W4, height=H4)
-    save(fig4, "fig4_change_per_well")
+    save(fig4, name)
 
 # ---- every figure on one page, each at its printed size (300 dpi PNG shown at 96 CSS pixels per inch) ------
 body = ""

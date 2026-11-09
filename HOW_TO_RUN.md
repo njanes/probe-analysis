@@ -104,6 +104,9 @@ Everything is in the experiment's `results/analysis` folder:
     - `fig7_before_after_third_run` (exp3): the probe run's 1:1000 alone.
   - `fig3_positive_beads`: the % of beads positive after treatment.
   - `fig4_change_per_well`: each well's change in fluorescence.
+  - In exp2 and exp3, every figure that includes BSA precoat also comes in a version without it, its
+    name ending in `_without_bsa` (`fig0b`, `fig3b`, `fig4b`, exp2's `fig5b`, and exp3's `fig6c` and
+    `fig6d`).
 - The .csv tables, which open in Excel.
 
 To check that the beads were found correctly, look at the images in `results/qc`: beads that were

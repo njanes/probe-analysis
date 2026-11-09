@@ -291,16 +291,20 @@ media run's.
 - The positive control's W8 has before images only, so it isn't compared.
 
 **Figures** (in each folder's `results/analysis`): fig0 (representative images), fig3 (% positive beads)
-and fig4 (change per well), each for every treatment, and before/after charts: bars of mean ± SD of the
-wells before and after, with a dot for each well (an error bar stops at 0). In each chart every bar is
-tested before vs after (paired t-test), and the after-treatment fluorescence of bars is compared as below.
+and fig4 (change per well), each for every treatment and again without BSA precoat (fig0b, fig3b and
+fig4b), and before/after charts: bars of mean ± SD of the wells before and after, with a dot for each
+well (an error bar stops at 0). In each chart every bar is tested before vs after (paired t-test), and
+the after-treatment fluorescence of bars is compared as below.
 
 | Chart | Bars | Compared after treatment |
 |---|---|---|
 | exp2 `fig2_before_after` | Annexin-V (exp1's buffer-only wells and exp2's annexin-V), negative control 1:3333 (exp1), probe 1:3333 (exp1 and exp2) | the probe vs the negative control at 1:3333 (Welch's t-test) |
 | exp2 `fig5_before_after_first_run` | exp2's controls, and 1:1000 (exp1's 1:1000 wells and W10) | each bar vs 1:1000 (Dunnett's test) |
+| exp2 `fig5b_before_after_first_run_without_bsa` | fig5 without BSA precoat | each bar vs 1:1000 (Dunnett's test) |
 | exp3 `fig6_before_after_second_run` | the media run and the probe run's 1:1000 | each bar vs 1:1000 (Dunnett's test) |
 | exp3 `fig6b_before_after_second_run_without_probe` | the media run | none |
+| exp3 `fig6c_before_after_second_run_without_bsa` | fig6 without BSA precoat | each bar vs 1:1000 (Dunnett's test) |
+| exp3 `fig6d_before_after_second_run_without_probe_or_bsa` | fig6b without BSA precoat | none |
 | exp3 `fig7_before_after_third_run` | the probe run's 1:1000 | none |
 
 Dunnett's test corrects for comparing several bars with one. There is no fig1 and no Tests 1 to 3 in
@@ -383,7 +387,8 @@ like the others.
   exp2 and exp3, each chart's bars and the treatments each bar pools (another experiment's with its
   folder name added, such as "Probe 1:1000, exp1"), with `COMPARE_TO` naming the bar the others are
   compared with. `REPRESENTATIVE_IMAGES`, `POSITIVE_BEADS` and `CHANGE_PER_WELL` choose the treatments in
-  figs 0, 3 and 4 (`None` = all). `FIGURE_NAMES` relabels a treatment in the figures.
+  figs 0, 3 and 4 (`None` = all); in exp2 and exp3, each lists one or more versions of its figure by name.
+  `FIGURE_NAMES` relabels a treatment in the figures.
 - To leave out an image for another reason, add it to `EXCLUDE` in `settings.py` with the reason.
 
 **Measurement settings** (1 pixel = 0.104 µm): beads kept if 3.8 to 7 µm across in transmitted

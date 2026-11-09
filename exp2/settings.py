@@ -39,26 +39,31 @@ OTHER_STUDIES = {"exp1": "exp1"}
 
 # Before/after bar charts with a dot per well: chart name -> {bar: the treatments whose wells the bar holds}. Fig2
 # is exp1's fig2 with this run's annexin-V and 1:3333 wells added (exp1's buffer-only wells are its annexin-V);
-# fig5 shows this run, its 1:1000 bar holding exp1's 1:1000 wells and W10.
+# fig5 shows this run, its 1:1000 bar holding exp1's 1:1000 wells and W10, and fig5b is fig5 without BSA.
+FIRST_RUN_WITHOUT_BSA = {
+    "Negative control (MFG-E8)": ["Negative control (MFG-E8)"],
+    "Negative control (GFP)": ["Negative control (GFP)"],
+    "Probe 1:1000": ["Probe 1:1000, exp1", "Probe 1:1000"],
+}
 BEFORE_AFTER = {
     "fig2_before_after": {
         "Annexin-V": ["Buffer only, exp1", "Annexin-V"],
         "Negative control 1:3333": ["Negative control 1:3333, exp1"],
         "Probe 1:3333": ["Probe 1:3333, exp1", "Probe 1:3333"],
     },
-    "fig5_before_after_first_run": {
-        "Negative control (MFG-E8)": ["Negative control (MFG-E8)"],
-        "Negative control (GFP)": ["Negative control (GFP)"],
-        "Probe 1:1000": ["Probe 1:1000, exp1", "Probe 1:1000"],
-        "Positive control (BSA precoat)": ["Positive control (BSA precoat)"],
-    },
+    "fig5_before_after_first_run": {**FIRST_RUN_WITHOUT_BSA,
+                                    "Positive control (BSA precoat)": ["Positive control (BSA precoat)"]},
+    "fig5b_before_after_first_run_without_bsa": FIRST_RUN_WITHOUT_BSA,
 }
 
 # Charts whose other bars are each compared with one bar, after treatment (Dunnett's test): chart -> that bar. In
 # fig2, the probe is compared with the negative control at 1:3333 instead (Welch's t-test).
-COMPARE_TO = {"fig5_before_after_first_run": "Probe 1:1000"}
+COMPARE_TO = {"fig5_before_after_first_run": "Probe 1:1000",
+              "fig5b_before_after_first_run_without_bsa": "Probe 1:1000"}
 
-# Treatments in the other figures: treatment names, or None for every treatment
-REPRESENTATIVE_IMAGES = None       # fig0
-POSITIVE_BEADS = None              # fig3
-CHANGE_PER_WELL = None             # fig4
+# The other figures: figure name -> its treatments, or None for every treatment. Each has a version without BSA.
+WITHOUT_BSA = [t for t in GROUPS.values() if t != "Positive control (BSA precoat)"]
+REPRESENTATIVE_IMAGES = {"fig0_representative_images": None,
+                         "fig0b_representative_images_without_bsa": WITHOUT_BSA}
+POSITIVE_BEADS = {"fig3_positive_beads": None, "fig3b_positive_beads_without_bsa": WITHOUT_BSA}
+CHANGE_PER_WELL = {"fig4_change_per_well": None, "fig4b_change_per_well_without_bsa": WITHOUT_BSA}

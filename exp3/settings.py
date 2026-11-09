@@ -46,22 +46,28 @@ SATURATION = 4095                  # detector maximum (12-bit); a bead with any 
 OTHER_STUDIES = {}
 
 # Before/after bar charts with a dot per well: chart name -> {bar: the treatments whose wells the bar holds}. Fig6
-# shows the media run beside the probe run's 1:1000, fig6b the media run alone and fig7 the probe run alone.
-MEDIA_RUN = {
+# shows the media run beside the probe run's 1:1000 and fig6b the media run alone; fig6c and fig6d are fig6 and
+# fig6b without BSA. Fig7 shows the probe run alone.
+NEGATIVE_CONTROLS = {
     "Negative control (MFG-E8)": ["Negative control (MFG-E8)"],
     "Negative control (GFP)": ["Negative control (GFP)"],
-    "Positive control (BSA precoat)": ["Positive control (BSA precoat)"],
 }
+MEDIA_RUN = {**NEGATIVE_CONTROLS, "Positive control (BSA precoat)": ["Positive control (BSA precoat)"]}
 BEFORE_AFTER = {
     "fig6_before_after_second_run": {**MEDIA_RUN, "Probe 1:1000": ["Probe 1:1000"]},
     "fig6b_before_after_second_run_without_probe": MEDIA_RUN,
+    "fig6c_before_after_second_run_without_bsa": {**NEGATIVE_CONTROLS, "Probe 1:1000": ["Probe 1:1000"]},
+    "fig6d_before_after_second_run_without_probe_or_bsa": NEGATIVE_CONTROLS,
     "fig7_before_after_third_run": {"Probe 1:1000": ["Probe 1:1000"]},
 }
 
 # Charts whose other bars are each compared with one bar, after treatment (Dunnett's test): chart -> that bar
-COMPARE_TO = {"fig6_before_after_second_run": "Probe 1:1000"}
+COMPARE_TO = {"fig6_before_after_second_run": "Probe 1:1000",
+              "fig6c_before_after_second_run_without_bsa": "Probe 1:1000"}
 
-# Treatments in the other figures: treatment names, or None for every treatment
-REPRESENTATIVE_IMAGES = None       # fig0
-POSITIVE_BEADS = None              # fig3
-CHANGE_PER_WELL = None             # fig4
+# The other figures: figure name -> its treatments, or None for every treatment. Each has a version without BSA.
+WITHOUT_BSA = [t for t in GROUPS.values() if t != "Positive control (BSA precoat)"]
+REPRESENTATIVE_IMAGES = {"fig0_representative_images": None,
+                         "fig0b_representative_images_without_bsa": WITHOUT_BSA}
+POSITIVE_BEADS = {"fig3_positive_beads": None, "fig3b_positive_beads_without_bsa": WITHOUT_BSA}
+CHANGE_PER_WELL = {"fig4_change_per_well": None, "fig4b_change_per_well_without_bsa": WITHOUT_BSA}
