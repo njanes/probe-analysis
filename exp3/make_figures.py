@@ -8,7 +8,8 @@ Saves PNG (300 dpi) and SVG files to exp3/results/analysis:
                                figure for each in settings.REPRESENTATIVE_IMAGES
   fig2_before_after, ...       mean fluorescence before and after with a dot per well: one chart for each in
                                settings.BEFORE_AFTER, each bar pooling the wells listed for it
-  fig3_positive_beads          % of beads positive after treatment: one figure for each in settings.POSITIVE_BEADS
+  fig3_positive_beads          % of beads positive after treatment, mean ± SD with a dot per well: one figure
+                               for each in settings.POSITIVE_BEADS
   fig4_change_per_well         each well's change in fluorescence (after − before), mean ± SD: one figure for
                                each in settings.CHANGE_PER_WELL
 and figures.html, every figure on one page (images embedded, so the file opens and can be shared on its own).
@@ -54,6 +55,7 @@ FONT = "Arial, Helvetica, sans-serif"             # a list, so a missing font fa
 CSCALE = alt.Scale(domain=ORDER, range=[COLOR[t] for t in ORDER])
 FILL = alt.Fill("treatment:N", scale=CSCALE, legend=None)
 FILLED = dict(shape="circle", filled=True, stroke="white", strokeWidth=1.2, size=50, opacity=1)
+DOT = dict(shape="circle", filled=True, fill=INK, stroke="white", strokeWidth=0.8, size=28, opacity=1)  # well on a bar
 
 
 def x_label(t):
@@ -265,8 +267,7 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
             alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
             fill=alt.Fill("fill:N", scale=None), stroke=alt.Stroke("stroke:N", scale=None)),
         *error_bars(pairs, alt.X("x:Q", scale=scale2x), Y2),
-        alt.Chart(dots).mark_point(shape="circle", filled=True, fill=INK, stroke="white", strokeWidth=0.8, size=28,
-                                   opacity=1).encode(alt.X("x:Q", scale=scale2x), Y2("y")),
+        alt.Chart(dots).mark_point(**DOT).encode(alt.X("x:Q", scale=scale2x), Y2("y")),
         *brackets(marks, scale2x, Y2, drop=0.025 * top),
         # treatment names under the before/after labels
         alt.Chart(pd.DataFrame({"x": range(len(groups)), "t": ["\n".join(x_label(t)) for t in groups]})).mark_text(
@@ -285,6 +286,10 @@ for name, treatments in S.POSITIVE_BEADS.items():
                               **mean_sd(wells.loc[wells["treatment"] == t, "pct_positive_after"])}
                              for i, t in enumerate(groups)])
     positive[["lo", "hi"]] = positive[["lo", "hi"]].clip(0, 100)      # a percentage stays within 0 to 100
+    dots3 = []                                                         # a dot per well, side by side across the bar
+    for i, t in enumerate(groups):
+        v = wells.loc[wells["treatment"] == t, "pct_positive_after"].dropna()
+        dots3 += [{"x": i + off, "y": y} for off, y in zip(spread(len(v), 0.15), v)]
     scale3x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
     axis3x = axis_labels({i: x_label(t) for i, t in enumerate(groups)}, title=None)
     Y3 = linear_y(0, 105, "Positive beads (%)", tick_hi=100)
@@ -292,6 +297,7 @@ for name, treatments in S.POSITIVE_BEADS.items():
         alt.Chart(positive).mark_rect().encode(alt.X("x0:Q", scale=scale3x, axis=axis3x), Y3("mean"), x2="x1:Q",
                                                y2="zero:Q", fill=alt.Fill("fill:N", scale=None)),
         *error_bars(positive, alt.X("x:Q", scale=scale3x), Y3),
+        alt.Chart(pd.DataFrame(dots3)).mark_point(**DOT).encode(alt.X("x:Q", scale=scale3x), Y3("y")),
     ).properties(width=W3, height=H3)
     save(fig3, name)
 
