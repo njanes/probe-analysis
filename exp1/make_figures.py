@@ -40,7 +40,7 @@ ORDER = list(dict.fromkeys(wells["treatment"]))  # treatments in display order, 
 PROBES = [t for t in ORDER if t.startswith("Probe 1:")]                   # probe dilutions, most diluted first
 
 # ---- style: sizes are in points (1 chart unit = 1 pt), so PNGs are saved at 300/72 scale = 300 dpi ----
-INK, INK2, EDGE, GRID = "#0b0b0b", "#52514e", "#c3c2b7", "#e1e0d9"
+INK, INK2, EDGE = "#000000", "#52514e", "#c3c2b7"         # publication style: black axes and text, no gridlines
 GREY, DARK_GREY = "#898781", "#5f5e5a"
 BLUES = ["#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95"]
 
@@ -110,7 +110,7 @@ def axis_labels(mapping, size=8, **kw):
     expr = '""'
     for value, lab in reversed(list(mapping.items())):
         expr = f"abs(datum.value - {value}) < 1e-6 ? {json.dumps(lab, ensure_ascii=False)} : {expr}"
-    return alt.Axis(values=list(mapping), labelExpr=expr, grid=False, labelFontSize=size, labelColor=INK2,
+    return alt.Axis(values=list(mapping), labelExpr=expr, grid=False, labelFontSize=size, labelColor=INK,
                     labelAngle=0, labelPadding=4, **kw)
 
 
@@ -132,28 +132,34 @@ def spread(n, half):
 
 
 def linear_y(lo, hi, axis_title, tick_hi=None):
-    """Y encoding builder for a linear axis from lo to hi, with nice tick values up to tick_hi (default hi)."""
+    """Y encoding builder for a linear axis from lo to hi, with nice tick values up to tick_hi (default hi). Its
+    axis line, Y.line (a layer to add to the chart), runs only from lo to the top tick, as in journal figures."""
+    ticks = nice_ticks(lo, hi if tick_hi is None else tick_hi)
     scale = alt.Scale(domain=[lo, hi], nice=False, zero=False)
-    axis = alt.Axis(title=axis_title, values=nice_ticks(lo, hi if tick_hi is None else tick_hi), format="d")
-    return lambda field: alt.Y(f"{field}:Q", scale=scale, axis=axis)
+    axis = alt.Axis(title=axis_title, values=ticks, format="d", domain=False)
+
+    def Y(field):
+        return alt.Y(f"{field}:Q", scale=scale, axis=axis)
+    Y.line = alt.Chart(pd.DataFrame({"lo": [lo], "hi": [ticks[-1]]})).mark_rule(color=INK, strokeWidth=1).encode(
+        x=alt.value(0), y=alt.Y("lo:Q", scale=scale, axis=axis), y2="hi:Q")
+    return Y
 
 
 def error_bars(data, x, Y, mean_width=0):
     """Mean ± SD of the wells: a line from data's lo to hi with end caps, plus a wider tick at the mean if
     mean_width is given. A treatment with a single well has no SD (NaN), so no bar."""
-    layers = [alt.Chart(data).mark_rule(color=INK, strokeWidth=1.2).encode(x, Y("lo"), y2="hi:Q")]
+    layers = [alt.Chart(data).mark_rule(color=INK, strokeWidth=1).encode(x, Y("lo"), y2="hi:Q")]
     for field, size in (("lo", 6), ("hi", 6), ("mean", mean_width)):
         if size:
-            layers.append(alt.Chart(data).mark_tick(orient="horizontal", size=size, thickness=1.2, color=INK, opacity=1)
+            layers.append(alt.Chart(data).mark_tick(orient="horizontal", size=size, thickness=1, color=INK, opacity=1)
                           .encode(x, Y(field)))
     return layers
 
 
 def p_label(p):
-    """Significance stars (*** p < 0.001, ** p < 0.01, * p < 0.05, ns = not significant) with the p-value."""
-    stars = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "ns"
-    value = "< 0.0001" if p < 1e-4 else f"= {p:.2g}"
-    return f"{stars} (p {value})"
+    """Significance stars: *** p < 0.001, ** p < 0.01, * p < 0.05, ns = not significant (the p-values themselves
+    are in stats_report.txt and figure_tests.csv)."""
+    return "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "ns"
 
 
 def pair_brackets(pairwise, position, base, step):
@@ -189,11 +195,9 @@ SAVED = []                                         # figure names, in the order 
 def save(chart, name):
     chart = (chart.configure(font=FONT, background="white", padding=6)
              .configure_view(stroke=None)
-             .configure_axis(domainColor=EDGE, tickColor=INK2, tickSize=3.5, labelColor=INK2, labelFontSize=9,
-                             titleColor=INK2, titleFontSize=9, titleFontWeight="normal", gridColor=GRID,
-                             gridWidth=0.8, labelFont=FONT, titleFont=FONT)
-             .configure_axisX(grid=False)
-             .configure_axisY(grid=True))
+             .configure_axis(domainColor=INK, domainWidth=1, tickColor=INK, tickWidth=1, tickSize=4, grid=False,
+                             labelColor=INK, labelFontSize=8, titleColor=INK, titleFontSize=9,
+                             titleFontWeight="normal", labelFont=FONT, titleFont=FONT))
     chart.save(OUT / f"{name}.png", scale_factor=300 / 72)
     chart.save(OUT / f"{name}.svg")
     SAVED.append(name)
@@ -263,26 +267,26 @@ if len(fit):                                       # analyze.py fits the curve o
     equation = (f"y = {fit.bottom:.1f} + {fit.top - fit.bottom:.1f} / (1 + (D / {fit.D50:.0f})^{fit.hill:.2f})"
                 .replace("-", "−") + f"\nD = dilution factor (1:D); R² = {fit.r_squared:.2f}")
     fig1 = alt.layer(
+        Y1.line,
         alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(Y1("y")),
-        alt.Chart(curve).mark_line(color=INK2, strokeWidth=1.2).encode(alt.X("x:Q", scale=scale1x, axis=axis1x),
+        alt.Chart(curve).mark_line(color=INK, strokeWidth=1.2).encode(alt.X("x:Q", scale=scale1x, axis=axis1x),
                                                                         Y1("y")),
         alt.Chart(resp).mark_point(**FILLED).encode(alt.X("x:Q", scale=scale1x), Y1("dF_pct"), fill=FILL),
         *error_bars(bars1, alt.X("D:Q", scale=scale1x), Y1, mean_width=14),
-        text_at(equation, 8, 8, align="left", baseline="top", lineBreak="\n", fontSize=8.5, color=INK2),
+        text_at(equation, 8, 8, align="left", baseline="top", lineBreak="\n", fontSize=8, color=INK),
     ).properties(width=W1, height=H1)
     save(fig1, "fig1_dilution_response")
 
 # ---- Figure 2: mean fluorescence before and after, paired bars (open = before, filled = after) --------------
 groups = [t for t in S.BEFORE_AFTER if t in ORDER]      # a treatment without wells is left out (analyze.py warned)
 if groups:
-    W2, H2 = slot(groups, 110) * len(groups), 320
+    W2, H2 = slot(groups, 110) * len(groups), 240
     rows = []
     for i, t in enumerate(groups):
         w = wells[wells["treatment"] == t]
         for tp, dx in (("before", -0.19), ("after", 0.19)):
             rows.append({"group": i, "timepoint": tp, "x": i + dx, "x0": i + dx - 0.16, "x1": i + dx + 0.16,
-                         "zero": 0, **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else COLOR[t],
-                         "stroke": GREY if tp == "before" else COLOR[t]})
+                         "zero": 0, **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else COLOR[t]})
     pairs = pd.DataFrame(rows)
     pairs["lo"] = pairs["lo"].clip(lower=0)                    # an error bar stops at 0 (fluorescence above background)
     heights = pairs.melt("group", ["mean", "hi"], value_name="y")[["group", "y"]]
@@ -299,9 +303,10 @@ if groups:
     Y2 = linear_y(min(pairs["lo"].min(), 0), max([m["y"] for m in marks] + [top]) + 0.12 * top,
                   "Normalized bead fluorescence", tick_hi=1.05 * top)
     chart = alt.layer(
-        alt.Chart(pairs).mark_rect(strokeWidth=1.2).encode(
+        Y2.line,
+        alt.Chart(pairs).mark_rect(stroke=INK, strokeWidth=0.8).encode(
             alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
-            fill=alt.Fill("fill:N", scale=None), stroke=alt.Stroke("stroke:N", scale=None)),
+            fill=alt.Fill("fill:N", scale=None)),
         *error_bars(pairs, alt.X("x:Q", scale=scale2x), Y2),
         *brackets(marks, scale2x, Y2, drop=0.025 * top),
         # treatment names under the before/after labels
@@ -314,7 +319,7 @@ if groups:
 # ---- Figure 3: % of beads positive after treatment --------------------------------------------------------
 groups = chosen(S.POSITIVE_BEADS)
 if groups:
-    W3, H3 = slot(groups, 90) * len(groups), 320
+    W3, H3 = slot(groups, 90) * len(groups), 240
     positive = pd.DataFrame([{"x": i, "x0": i - 0.3, "x1": i + 0.3, "zero": 0, "fill": COLOR[t],
                               **mean_sd(wells.loc[wells["treatment"] == t, "pct_positive_after"])}
                              for i, t in enumerate(groups)])
@@ -328,8 +333,10 @@ if groups:
     marks = pair_brackets(tests[tests["figure"] == "fig3"], {t: i for i, t in enumerate(groups)}, 108, 11)
     Y3 = linear_y(0, max([m["y"] for m in marks], default=100) + 12, "Positive beads (%)", tick_hi=100)
     fig3 = alt.layer(
-        alt.Chart(positive).mark_rect().encode(alt.X("x0:Q", scale=scale3x, axis=axis3x), Y3("mean"), x2="x1:Q",
-                                               y2="zero:Q", fill=alt.Fill("fill:N", scale=None)),
+        Y3.line,
+        alt.Chart(positive).mark_rect(stroke=INK, strokeWidth=0.8).encode(
+            alt.X("x0:Q", scale=scale3x, axis=axis3x), Y3("mean"), x2="x1:Q", y2="zero:Q",
+            fill=alt.Fill("fill:N", scale=None)),
         *error_bars(positive, alt.X("x:Q", scale=scale3x), Y3),
         alt.Chart(pd.DataFrame(dots3)).mark_point(**DOT).encode(alt.X("x:Q", scale=scale3x), Y3("y")),
         *brackets(marks, scale3x, Y3, drop=2.5),
@@ -339,7 +346,7 @@ if groups:
 # ---- Figure 4: each well's change in fluorescence, with the mean ± SD centred on the wells ------------------
 groups = chosen(S.CHANGE_PER_WELL)
 if groups:
-    W4, H4 = slot(groups, 70) * len(groups), 260
+    W4, H4 = slot(groups, 70) * len(groups), 220
     change = wells[wells["treatment"].isin(groups)].copy()
     change["x"] = change["treatment"].map(groups.index) + change.groupby("treatment")["well_name"].transform(
         lambda s: spread(len(s), 0.12))                                      # a treatment's wells side by side
@@ -350,6 +357,7 @@ if groups:
     Y4 = linear_y(*padded(min(change["dF"].min(), bars4["lo"].min(), 0),
                           max(change["dF"].max(), bars4["hi"].max())), "Δ normalized fluorescence")
     fig4 = alt.layer(
+        Y4.line,
         alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=EDGE, strokeWidth=1).encode(Y4("y")),
         alt.Chart(change).mark_point(**FILLED).encode(alt.X("x:Q", scale=scale4x, axis=axis4x), Y4("dF"), fill=FILL),
         *error_bars(bars4, alt.X("x:Q", scale=scale4x), Y4, mean_width=14),

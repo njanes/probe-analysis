@@ -183,8 +183,8 @@ the negative control at the same dilution only to 38. The Annexin-V (buffer only
 on average, but very unevenly (SD 117).
 
 Brackets over each pair compare before with after (paired t-test); the bracket above compares the
-probe's after bar with the negative control's (Welch's t-test). Each shows its p-value: * p < 0.05,
-** p < 0.01, *** p < 0.001, ns = not significant. Only the probe at 1:3333 changed significantly
+probe's after bar with the negative control's (Welch's t-test). Each is marked with stars: * p < 0.05,
+** p < 0.01, *** p < 0.001, ns = not significant (the p-values are in `stats_report.txt`). Only the probe at 1:3333 changed significantly
 (p = 0.015), and after treatment it was brighter than the negative control (p = 0.017). Annexin-V's
 rise was not significant (p = 0.16) because its wells varied widely: one well rose to 304 counts,
 the other two to 124 and 84.
@@ -194,7 +194,7 @@ the other two to 124 and 84.
 ![Positive beads](results/analysis/fig3_positive_beads.png)
 
 A bead counts as positive if its signal is above 68.5 counts, the mean + 3 SD of all 719 untreated
-beads. Bars are the mean of the wells, ± SD (kept within 0 to 100%).
+beads. Bars are the mean of the wells, ± SD (kept within 0 to 100%), with a dot for each well.
 
 | Dilution | Positive beads after treatment |
 |---|---|
@@ -202,7 +202,7 @@ beads. Bars are the mean of the wells, ± SD (kept within 0 to 100%).
 | 1:3333 | 71% (± 9) |
 | 1:200 | 99% (± 1) |
 
-Brackets compare the dilutions pairwise (Tukey's test), each with its p-value. All three differ:
+Brackets compare the dilutions pairwise (Tukey's test), each marked with stars. All three differ:
 1:3333 from 1:10000 (p = 0.00016), 1:200 from 1:10000 (p < 0.0001) and 1:200 from 1:3333 (p = 0.0056).
 
 ### Change per well
@@ -294,7 +294,9 @@ media run's.
 and fig4 (change per well), each for every treatment and again without BSA precoat (fig0b, fig3b and
 fig4b), and before/after charts: bars of mean ± SD of the wells before and after, with a dot for each
 well (an error bar stops at 0). In each chart every bar is tested before vs after (paired t-test), and
-the after-treatment fluorescence of bars is compared as below.
+the after-treatment fluorescence of bars is compared as below. All figures are in publication style:
+black axes on the left and bottom only, no gridlines, bars outlined in black, and significance marked
+with stars (the p-values are in `stats_report.txt` and `figure_tests.csv`).
 
 | Chart | Bars | Compared after treatment |
 |---|---|---|

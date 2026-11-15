@@ -107,6 +107,8 @@ Everything is in the experiment's `results/analysis` folder:
   - In exp2 and exp3, every figure that includes BSA precoat also comes in a version without it, its
     name ending in `_without_bsa` (`fig0b`, `fig3b`, `fig4b`, exp2's `fig5b`, and exp3's `fig6c` and
     `fig6d`).
+  - Significance is marked with stars (* p < 0.05, ** p < 0.01, *** p < 0.001, ns = not significant);
+    the p-values themselves are in `stats_report.txt`.
 - The .csv tables, which open in Excel.
 
 To check that the beads were found correctly, look at the images in `results/qc`: beads that were
