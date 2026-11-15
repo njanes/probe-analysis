@@ -4,7 +4,7 @@ recalculated), with Altair. Run after exp1's analyze.py:
   python exp1/make_figures.py
 
 Saves PNG (300 dpi) and SVG files to exp1/results/analysis:
-  fig0_representative_images   typical before/after image per treatment (green), one fixed display range, for the
+  fig0_representative_images   typical before/after image per treatment (greyscale), one fixed display range, for the
                                treatments in settings.REPRESENTATIVE_IMAGES
   fig1_dilution_response       each well's change as % of the strongest dilution, mean ± SD, fitted curve
                                (only if analyze.py fitted the curve, which needs 4 probe dilutions)
@@ -40,9 +40,9 @@ ORDER = list(dict.fromkeys(wells["treatment"]))  # treatments in display order, 
 PROBES = [t for t in ORDER if t.startswith("Probe 1:")]                   # probe dilutions, most diluted first
 
 # ---- style: sizes are in points (1 chart unit = 1 pt), so PNGs are saved at 300/72 scale = 300 dpi ----
-INK, INK2, EDGE = "#000000", "#52514e", "#c3c2b7"         # publication style: black axes and text, no gridlines
-GREY, DARK_GREY = "#898781", "#5f5e5a"
-BLUES = ["#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95"]
+INK, INK2, EDGE = "#000000", "#555555", "#bfbfbf"   # publication style: greyscale, black axes and text, no gridlines
+GREY, DARK_GREY = "#e6e6e6", "#b3b3b3"                      # controls: light greys
+PROBE_GREYS = ["#bfbfbf", "#262626"]                                    # probe: most to least diluted
 
 
 def ramp(anchors, n):
@@ -54,11 +54,11 @@ def ramp(anchors, n):
 
 CONTROLS = [t for t in ORDER if t not in PROBES]
 COLOR = {**dict(zip(CONTROLS, ramp([GREY, DARK_GREY], len(CONTROLS)))),     # controls grey
-         **dict(zip(PROBES, ramp(BLUES, len(PROBES))))}                   # probe blues darken with less dilution
+         **dict(zip(PROBES, ramp(PROBE_GREYS, len(PROBES))))}             # probe greys darken with less dilution
 FONT = "Arial, Helvetica, sans-serif"             # a list, so a missing font falls back instead of vanishing
 CSCALE = alt.Scale(domain=ORDER, range=[COLOR[t] for t in ORDER])
 FILL = alt.Fill("treatment:N", scale=CSCALE, legend=None)
-FILLED = dict(shape="circle", filled=True, stroke="white", strokeWidth=1.2, size=50, opacity=1)
+FILLED = dict(shape="circle", filled=True, stroke=INK, strokeWidth=0.8, size=50, opacity=1)   # light greys show
 DOT = dict(shape="circle", filled=True, fill=INK, stroke="white", strokeWidth=0.8, size=28, opacity=1)  # well on a bar
 
 
@@ -206,7 +206,7 @@ def save(chart, name):
 
 print("Making figures:")
 
-# ---- Figure 0: representative images (chosen by rule in analyze.py), shown in green, 5 treatments a row ----
+# ---- Figure 0: representative images (chosen by rule in analyze.py), in greyscale, 5 treatments a row ------
 groups = chosen(S.REPRESENTATIVE_IMAGES)
 if groups:
     (OUT / "representative_images").mkdir(exist_ok=True)
@@ -218,9 +218,7 @@ if groups:
             for t in groups[start:start + 5]:
                 r = reps[(reps["treatment"] == t) & (reps["timepoint"] == tp)].iloc[0]
                 png = RESULTS / "figure_images" / f"{Path(r['file']).stem}_fluor.png"   # exported by the macro
-                g = Image.open(png).convert("RGB").getchannel("G")
-                black = Image.new("L", g.size, 0)
-                img = Image.merge("RGB", (black, g, black))          # grey to green, like Fiji's Green LUT
+                img = Image.open(png).convert("L")                   # greyscale, as exported (Fiji's Grays LUT)
                 img.save(OUT / "representative_images" / png.name)  # full-resolution copy
                 img.thumbnail((1024, 1024), Image.LANCZOS)           # ample for a 2.4-inch panel at 300 dpi
                 buf = io.BytesIO()

@@ -294,9 +294,9 @@ media run's.
 and fig4 (change per well), each for every treatment and again without BSA precoat (fig0b, fig3b and
 fig4b), and before/after charts: bars of mean ± SD of the wells before and after, with a dot for each
 well (an error bar stops at 0). In each chart every bar is tested before vs after (paired t-test), and
-the after-treatment fluorescence of bars is compared as below. All figures are in publication style:
-black axes on the left and bottom only, no gridlines, bars outlined in black, and significance marked
-with stars (the p-values are in `stats_report.txt` and `figure_tests.csv`).
+the after-treatment fluorescence of bars is compared as below. All figures are in greyscale publication
+style: black axes on the left and bottom only, no gridlines, grey bars outlined in black (controls
+lighter, the probe darker), microscope images in grey, and significance marked with stars (the p-values are in `stats_report.txt` and `figure_tests.csv`).
 
 | Chart | Bars | Compared after treatment |
 |---|---|---|

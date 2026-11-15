@@ -4,7 +4,7 @@ Altair. Run after exp2's analyze.py:
   python exp2/make_figures.py
 
 Saves PNG (300 dpi) and SVG files to exp2/results/analysis:
-  fig0_representative_images   typical before/after image per treatment (green), one fixed display range: one
+  fig0_representative_images   typical before/after image per treatment (greyscale), one fixed display range: one
                                figure for each in settings.REPRESENTATIVE_IMAGES
   fig2_before_after, ...       mean fluorescence before and after with a dot per well: one chart for each in
                                settings.BEFORE_AFTER, each bar pooling the wells listed for it
@@ -37,9 +37,9 @@ tests = pd.read_csv(OUT / "figure_tests.csv")
 ORDER = list(dict.fromkeys(wells["treatment"]))  # treatments in display order, as analyze.py sorted the wells
 
 # ---- style: sizes are in points (1 chart unit = 1 pt), so PNGs are saved at 300/72 scale = 300 dpi ----
-INK, INK2, EDGE = "#000000", "#52514e", "#c3c2b7"         # publication style: black axes and text, no gridlines
-GREY, DARK_GREY = "#898781", "#5f5e5a"
-PROBE_BLUE = {"Probe 1:3333": "#3987e5", "Probe 1:1000": "#2a78d6"}  # each dilution's blue in exp1's figures
+INK, INK2, EDGE = "#000000", "#555555", "#bfbfbf"   # publication style: greyscale, black axes and text, no gridlines
+GREY, DARK_GREY = "#e6e6e6", "#b3b3b3"                      # controls: light greys
+PROBE_GREY = {"Probe 1:3333": "#7d7d7d", "Probe 1:1000": "#686868"}  # each dilution's grey in exp1's figures
 
 
 def ramp(anchors, n):
@@ -49,12 +49,12 @@ def ramp(anchors, n):
             for at in np.linspace(0, len(anchors) - 1, n)]
 
 
-CONTROLS = [t for t in ORDER if t not in PROBE_BLUE]
-COLOR = {**dict(zip(CONTROLS, ramp([GREY, DARK_GREY], len(CONTROLS)))), **PROBE_BLUE}   # controls grey, probe blue
+CONTROLS = [t for t in ORDER if t not in PROBE_GREY]
+COLOR = {**dict(zip(CONTROLS, ramp([GREY, DARK_GREY], len(CONTROLS)))), **PROBE_GREY}   # controls light, probe darker
 FONT = "Arial, Helvetica, sans-serif"             # a list, so a missing font falls back instead of vanishing
 CSCALE = alt.Scale(domain=ORDER, range=[COLOR[t] for t in ORDER])
 FILL = alt.Fill("treatment:N", scale=CSCALE, legend=None)
-FILLED = dict(shape="circle", filled=True, stroke="white", strokeWidth=1.2, size=50, opacity=1)
+FILLED = dict(shape="circle", filled=True, stroke=INK, strokeWidth=0.8, size=50, opacity=1)   # light greys show
 DOT = dict(shape="circle", filled=True, fill=INK, stroke="white", strokeWidth=0.8, size=28, opacity=1)  # well on a bar
 
 
@@ -196,7 +196,7 @@ def save(chart, name):
 
 print("Making figures:")
 
-# ---- Figure 0: representative images (chosen by rule in analyze.py), shown in green, 5 treatments a row ----
+# ---- Figure 0: representative images (chosen by rule in analyze.py), in greyscale, 5 treatments a row ------
 for name, treatments in S.REPRESENTATIVE_IMAGES.items():
     groups = chosen(treatments)
     if not groups:
@@ -210,9 +210,7 @@ for name, treatments in S.REPRESENTATIVE_IMAGES.items():
             for t in groups[start:start + 5]:
                 r = reps[(reps["treatment"] == t) & (reps["timepoint"] == tp)].iloc[0]
                 png = RESULTS / "figure_images" / f"{Path(r['file']).stem}_fluor.png"   # exported by the macro
-                g = Image.open(png).convert("RGB").getchannel("G")
-                black = Image.new("L", g.size, 0)
-                img = Image.merge("RGB", (black, g, black))          # grey to green, like Fiji's Green LUT
+                img = Image.open(png).convert("L")                   # greyscale, as exported (Fiji's Grays LUT)
                 img.save(OUT / "representative_images" / png.name)  # full-resolution copy
                 img.thumbnail((1024, 1024), Image.LANCZOS)           # ample for a 2.4-inch panel at 300 dpi
                 buf = io.BytesIO()
@@ -233,14 +231,14 @@ for name, treatments in S.REPRESENTATIVE_IMAGES.items():
 
 # ---- Before/after charts (settings.BEFORE_AFTER): mean fluorescence, paired bars (open = before, filled =
 # after), a dot per well. A bar pools the wells analyze.py listed for it in before_after_wells.csv. Probe bars keep
-# their dilution's blue; the other bars are greys, lightest first.
+# their dilution's grey; the other bars are lighter greys, lightest first.
 pooled = pd.read_csv(OUT / "before_after_wells.csv")
 for fig, figure_bars in S.BEFORE_AFTER.items():
     groups = [bar for bar in figure_bars if ((pooled["figure"] == fig) & (pooled["bar"] == bar)).any()]
     if not groups:                                 # every bar without wells (analyze.py warned)
         continue
-    greys = [t for t in groups if t not in PROBE_BLUE]
-    shade = {**dict(zip(greys, ramp([GREY, DARK_GREY], len(greys)))), **PROBE_BLUE}
+    greys = [t for t in groups if t not in PROBE_GREY]
+    shade = {**dict(zip(greys, ramp([GREY, DARK_GREY], len(greys)))), **PROBE_GREY}
     W2, H2 = slot(groups, 110) * len(groups), 240
     rows, dots = [], []
     for i, t in enumerate(groups):
