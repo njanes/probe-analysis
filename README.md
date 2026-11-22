@@ -177,7 +177,8 @@ detector maximum. The curve's midpoint, half of the maximum, is at about 1:1200.
 
 ![Mean fluorescence before and after treatment](results/analysis/fig2_before_after.png)
 
-Mean bead fluorescence of the wells before (open bars) and after (filled bars) treatment, ± SD. Before
+Mean bead fluorescence of the wells before (open bars) and after (filled bars) treatment, ± SD, with a
+dot for each well. Before
 treatment all three groups are at 22 to 28 counts. After, the probe at 1:3333 rises to 271 counts and
 the negative control at the same dilution only to 38. The Annexin-V (buffer only) wells rose to 171
 on average, but very unevenly (SD 117).
@@ -301,16 +302,18 @@ lighter, the probe darker), microscope images in grey, and significance marked w
 | Chart | Bars | Compared after treatment |
 |---|---|---|
 | exp2 `fig2_before_after` | Annexin-V (exp1's buffer-only wells and exp2's annexin-V), negative control 1:3333 (exp1), probe 1:3333 (exp1 and exp2) | the probe vs the negative control at 1:3333 (Welch's t-test) |
-| exp2 `fig5_before_after_first_run` | exp2's controls, and 1:1000 (exp1's 1:1000 wells and W10) | each bar vs 1:1000 (Dunnett's test) |
-| exp2 `fig5b_before_after_first_run_without_bsa` | fig5 without BSA precoat | each bar vs 1:1000 (Dunnett's test) |
-| exp3 `fig6_before_after_second_run` | the media run and the probe run's 1:1000 | each bar vs 1:1000 (Dunnett's test) |
+| exp2 `fig5_before_after_first_run` | exp2's controls, and 1:1000 (exp1's 1:1000 wells and W10) | each bar vs 1:1000 (Welch's t-test, Holm-corrected) |
+| exp2 `fig5b_before_after_first_run_without_bsa` | fig5 without BSA precoat | each bar vs 1:1000 (Welch's t-test, Holm-corrected) |
+| exp3 `fig6_before_after_second_run` | the media run and the probe run's 1:1000 | each bar vs 1:1000 (Welch's t-test, Holm-corrected) |
 | exp3 `fig6b_before_after_second_run_without_probe` | the media run | none |
-| exp3 `fig6c_before_after_second_run_without_bsa` | fig6 without BSA precoat | each bar vs 1:1000 (Dunnett's test) |
+| exp3 `fig6c_before_after_second_run_without_bsa` | fig6 without BSA precoat | each bar vs 1:1000 (Welch's t-test, Holm-corrected) |
 | exp3 `fig6d_before_after_second_run_without_probe_or_bsa` | fig6b without BSA precoat | none |
 | exp3 `fig7_before_after_third_run` | the probe run's 1:1000 | none |
 
-Dunnett's test corrects for comparing several bars with one. There is no fig1 and no Tests 1 to 3 in
-either: they need probe dilutions and buffer or negative controls at the same dilution.
+Each bar is compared with 1:1000 by a Welch's t-test, which doesn't assume the bars' wells vary alike
+(BSA precoat's wells vary far more than the others'), with the p-values Holm-corrected for comparing
+several bars with one. There is no fig1 and no Tests 1 to 3 in either: they need probe dilutions and
+buffer or negative controls at the same dilution.
 
 ## Files and re-running
 

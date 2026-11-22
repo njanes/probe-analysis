@@ -62,6 +62,14 @@ def fmt_p(p):
     return "<0.0001" if p < 1e-4 else f"{p:.4f}"
 
 
+def holm(p):
+    """Holm-corrected p-values, for several tests at once: the smallest p times the number of tests, the next times
+    one fewer, and so on, each at least the one before and at most 1."""
+    order = np.argsort(p)
+    adjusted = np.minimum(1, np.maximum.accumulate([(len(p) - k) * p[i] for k, i in enumerate(order)]))
+    return adjusted[np.argsort(order)]
+
+
 def mean_ci(v):
     """Mean, SD and 95% confidence interval (t distribution) of a set of well values."""
     m, sd, n = v.mean(), v.std(), len(v)
@@ -265,7 +273,8 @@ for r in summary.itertuples():
 # (settings.OTHER_STUDIES). Each comparison needs at least 2 wells per bar: each bar before vs after (paired t-test
 # on its wells), the probe's after-treatment fluorescence vs the negative control's at the same dilution (Welch's
 # t-test), and, in a chart listed in settings.COMPARE_TO, every other bar's after-treatment fluorescence vs that
-# bar's (Dunnett's test, which corrects for comparing several bars with one)
+# bar's (Welch's t-tests, which don't assume the bars' wells vary alike, Holm-corrected for comparing several bars
+# with one)
 pool = pd.concat([wells.astype({"treatment": str}), *others])
 pool["dF"] = pool["F_after"] - pool["F_before"]
 bars, rows, held = [], [], {}     # held: chart -> {bar: its wells}, bars without wells left out
@@ -297,10 +306,10 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
     elif ref:
         compared = [bar for bar in in_bar if bar != ref and len(in_bar[bar]) >= 2]
         if len(in_bar[ref]) >= 2 and compared:
-            test = stats.dunnett(*[in_bar[bar]["F_after"] for bar in compared], control=in_bar[ref]["F_after"],
-                                 random_state=0)
-            rows += [[tag, "Dunnett's test, after vs after", ref, bar, in_bar[bar]["F_after"].mean()
-                      - in_bar[ref]["F_after"].mean(), p] for bar, p in zip(compared, test.pvalue)]
+            p = [stats.ttest_ind(in_bar[bar]["F_after"], in_bar[ref]["F_after"], equal_var=False).pvalue
+                 for bar in compared]
+            rows += [[tag, "Holm-corrected Welch t-test, after vs after", ref, bar, in_bar[bar]["F_after"].mean()
+                      - in_bar[ref]["F_after"].mean(), p] for bar, p in zip(compared, holm(p))]
 columns = ["figure", "bar", "treatment", "well_name", "F_before", "F_after", "dF"]
 (pd.concat(bars)[columns] if bars else pd.DataFrame(columns=columns)).to_csv(OUT / "before_after_wells.csv",
                                                                              index=False)
@@ -328,14 +337,14 @@ for fig, figure_bars in S.BEFORE_AFTER.items():
         say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
     ref = S.COMPARE_TO.get(fig)
     if ref in in_bar:
-        dunnett = shown[shown["test"].str.startswith("Dunnett")]
-        say(f"Figure {tag[3:]}: after treatment, each bar vs {ref} (Dunnett's test, corrected for "
-            f"{len(dunnett)} comparison{'s' * (len(dunnett) != 1)})" if len(dunnett) else
+        vs_ref = shown[shown["test"].str.startswith("Holm")]
+        say(f"Figure {tag[3:]}: after treatment, each bar vs {ref} (Welch's t-test, Holm-corrected for "
+            f"{len(vs_ref)} comparison{'s' * (len(vs_ref) != 1)})" if len(vs_ref) else
             f"Figure {tag[3:]}: no comparisons with {ref}; they need at least 2 wells in it and in another bar")
-        for r in dunnett.itertuples():
+        for r in vs_ref.itertuples():
             say(f"  {r.b} vs {r.a}: {r.difference:+.1f} counts, p = {fmt_p(r.p)}")
         for bar in in_bar:
-            if len(dunnett) and bar != ref and len(in_bar[bar]) < 2:
+            if len(vs_ref) and bar != ref and len(in_bar[bar]) < 2:
                 say(f"  {bar} vs {ref}: not tested: 1 well")
 
 # ---- 7. representative images, chosen by rule: the typical well, then its typical image -------------------

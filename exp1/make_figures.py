@@ -8,7 +8,8 @@ Saves PNG (300 dpi) and SVG files to exp1/results/analysis:
                                treatments in settings.REPRESENTATIVE_IMAGES
   fig1_dilution_response       each well's change as % of the strongest dilution, mean ± SD, fitted curve
                                (only if analyze.py fitted the curve, which needs 4 probe dilutions)
-  fig2_before_after            mean fluorescence before and after, for the treatments in settings.BEFORE_AFTER
+  fig2_before_after            mean fluorescence before and after with a dot per well, for the treatments in
+                               settings.BEFORE_AFTER
   fig3_positive_beads          % of beads positive after treatment, mean ± SD with a dot per well, for the
                                treatments in settings.POSITIVE_BEADS
   fig4_change_per_well         each well's change in fluorescence (after − before), mean ± SD, for the
@@ -275,19 +276,21 @@ if len(fit):                                       # analyze.py fits the curve o
     ).properties(width=W1, height=H1)
     save(fig1, "fig1_dilution_response")
 
-# ---- Figure 2: mean fluorescence before and after, paired bars (open = before, filled = after) --------------
+# ---- Figure 2: mean fluorescence before and after, paired bars (open = before, filled = after), a dot per well --
 groups = [t for t in S.BEFORE_AFTER if t in ORDER]      # a treatment without wells is left out (analyze.py warned)
 if groups:
     W2, H2 = slot(groups, 110) * len(groups), 240
-    rows = []
+    rows, dots = [], []
     for i, t in enumerate(groups):
         w = wells[wells["treatment"] == t]
         for tp, dx in (("before", -0.19), ("after", 0.19)):
             rows.append({"group": i, "timepoint": tp, "x": i + dx, "x0": i + dx - 0.16, "x1": i + dx + 0.16,
                          "zero": 0, **mean_sd(w[f"F_{tp}"]), "fill": "white" if tp == "before" else COLOR[t]})
-    pairs = pd.DataFrame(rows)
+            # a dot per well, side by side across the bar (a well keeps its place in the before and after bars)
+            dots += [{"group": i, "x": i + dx + off, "y": y} for off, y in zip(spread(len(w), 0.11), w[f"F_{tp}"])]
+    pairs, dots = pd.DataFrame(rows), pd.DataFrame(dots)
     pairs["lo"] = pairs["lo"].clip(lower=0)                    # an error bar stops at 0 (fluorescence above background)
-    heights = pairs.melt("group", ["mean", "hi"], value_name="y")[["group", "y"]]
+    heights = pd.concat([pairs.melt("group", ["mean", "hi"], value_name="y")[["group", "y"]], dots])
     scale2x = alt.Scale(domain=[-0.5, len(groups) - 0.5], nice=False)
     axis2x = axis_labels(dict(zip(pairs["x"], pairs["timepoint"])), size=7.5, title=None)
     # significance: before vs after over each pair (paired t-test), then above, the probe's after bar vs the
@@ -298,7 +301,7 @@ if groups:
              for r in t2[t2["test"].str.startswith("paired")].itertuples() for i in [groups.index(r.a)]]
     marks += pair_brackets(t2[~t2["test"].str.startswith("paired")], {t: i + 0.19 for i, t in enumerate(groups)},
                            1.2 * top, 0.13 * top)
-    Y2 = linear_y(min(pairs["lo"].min(), 0), max([m["y"] for m in marks] + [top]) + 0.12 * top,
+    Y2 = linear_y(min(pairs["lo"].min(), dots["y"].min(), 0), max([m["y"] for m in marks] + [top]) + 0.12 * top,
                   "Normalized bead fluorescence", tick_hi=1.05 * top)
     chart = alt.layer(
         Y2.line,
@@ -306,6 +309,7 @@ if groups:
             alt.X("x0:Q", scale=scale2x, axis=axis2x), Y2("mean"), x2="x1:Q", y2="zero:Q",
             fill=alt.Fill("fill:N", scale=None)),
         *error_bars(pairs, alt.X("x:Q", scale=scale2x), Y2),
+        alt.Chart(dots).mark_point(**DOT).encode(alt.X("x:Q", scale=scale2x), Y2("y")),
         *brackets(marks, scale2x, Y2, drop=0.025 * top),
         # treatment names under the before/after labels
         alt.Chart(pd.DataFrame({"x": range(len(groups)), "t": ["\n".join(x_label(t)) for t in groups]})).mark_text(

@@ -56,8 +56,8 @@ BEFORE_AFTER = {
     "fig5b_before_after_first_run_without_bsa": FIRST_RUN_WITHOUT_BSA,
 }
 
-# Charts whose other bars are each compared with one bar, after treatment (Dunnett's test): chart -> that bar. In
-# fig2, the probe is compared with the negative control at 1:3333 instead (Welch's t-test).
+# Charts whose other bars are each compared with one bar, after treatment (Welch's t-tests, Holm-corrected): chart
+# -> that bar. In fig2, the probe is compared with the negative control at 1:3333 instead (Welch's t-test).
 COMPARE_TO = {"fig5_before_after_first_run": "Probe 1:1000",
               "fig5b_before_after_first_run_without_bsa": "Probe 1:1000"}
 

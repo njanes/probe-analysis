@@ -94,7 +94,7 @@ Everything is in the experiment's `results/analysis` folder:
   in every experiment:
   - `fig0_representative_images`: a typical before and after image for each treatment.
   - `fig1_dilution_response` (exp1 only): the dilution-response curve.
-  - Before/after charts: mean fluorescence before and after, with a dot for each well in exp2 and exp3.
+  - Before/after charts: mean fluorescence before and after, with a dot for each well.
     - `fig2_before_after`: in exp1, its treatments; in exp2, annexin-V and the probe and negative
       control at 1:3333, each bar pooling exp1's wells with exp2's.
     - `fig5_before_after_first_run` (exp2): exp2's controls, each compared with the probe at 1:1000

@@ -61,7 +61,8 @@ BEFORE_AFTER = {
     "fig7_before_after_third_run": {"Probe 1:1000": ["Probe 1:1000"]},
 }
 
-# Charts whose other bars are each compared with one bar, after treatment (Dunnett's test): chart -> that bar
+# Charts whose other bars are each compared with one bar, after treatment (Welch's t-tests, Holm-corrected): chart
+# -> that bar
 COMPARE_TO = {"fig6_before_after_second_run": "Probe 1:1000",
               "fig6c_before_after_second_run_without_bsa": "Probe 1:1000"}
 
